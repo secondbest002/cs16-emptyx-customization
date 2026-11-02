@@ -1,0 +1,1760 @@
+/* ==========================================================================
+   COUNTER-STRIKE 1.6 MOD HUB PRO - STITCH TACTICAL HUD DESIGN SYSTEM
+   Zero Unicode Emojis | 22 Animated Tactical Vector Glyphs | 100% Offline Ready
+   ========================================================================== */
+
+:root {
+  /* Stitch Tactical HUD Color Tokens */
+  --void-base: #080C14;
+  --void-surface: #0B111E;
+  --surface-container-lowest: #0a0e16;
+  --surface-container-low: #181c24;
+  --surface-container: #1c2028;
+  --surface-container-high: #262a33;
+  --surface-container-highest: #31353e;
+
+  --tactical-amber: #F59E0B;
+  --tactical-amber-bright: #FBBF24;
+  --tactical-amber-glow: rgba(245, 158, 11, 0.25);
+  --cyber-cyan: #38BDF8;
+  --cyber-cyan-glow: rgba(56, 189, 248, 0.25);
+  --emerald-safe: #10B981;
+  --emerald-safe-glow: rgba(16, 185, 129, 0.25);
+  --demon-crimson: #EF4444;
+  --demon-crimson-glow: rgba(239, 68, 68, 0.35);
+  --muted-slate: #64748B;
+  --text-main: #DFE2EE;
+  --text-muted: #94A3B8;
+
+  --border-glass: rgba(255, 255, 255, 0.08);
+  --border-glass-bright: rgba(255, 255, 255, 0.16);
+  --glass-panel: rgba(11, 17, 30, 0.76);
+  --glass-panel-elevated: rgba(15, 23, 42, 0.88);
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', Consolas, "Courier New", monospace;
+
+  --sidebar-width: 256px;
+  --header-height: 64px;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background-color: var(--void-base);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+  user-select: none;
+  overflow-x: hidden;
+  background-image: 
+    radial-gradient(circle at 10% 10%, rgba(245, 158, 11, 0.03) 0%, transparent 40%),
+    radial-gradient(circle at 90% 90%, rgba(56, 189, 248, 0.03) 0%, transparent 40%);
+  background-attachment: fixed;
+}
+
+/* Custom Tactical Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--void-base);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--surface-container-highest);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--tactical-amber);
+}
+
+/* ==========================================================================
+   22 ANIMATED TACTICAL VECTOR GLYPHS (PURE INLINE SVG + CSS KEYFRAMES)
+   ========================================================================== */
+
+.glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.glyph-sm { width: 14px; height: 14px; }
+.glyph-md { width: 18px; height: 18px; }
+.glyph-lg { width: 24px; height: 24px; }
+.glyph-xl { width: 32px; height: 32px; }
+
+.glyph svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.glyph-star {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* 1. Core Reactor (Rotating Octagon) */
+@keyframes rotate-reactor {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.glyph-core-reactor svg {
+  animation: rotate-reactor 14s linear infinite;
+}
+.glyph-core-reactor:hover svg {
+  animation-duration: 4s;
+}
+
+/* 2. Tournament Aegis (Laser Sweep Shield) */
+@keyframes laser-sweep {
+  0% { opacity: 0.3; stroke-dashoffset: 24; }
+  50% { opacity: 1; stroke-dashoffset: 0; }
+  100% { opacity: 0.3; stroke-dashoffset: -24; }
+}
+.glyph-tournament-aegis .laser-line {
+  stroke-dasharray: 12 12;
+  animation: laser-sweep 2.8s ease-in-out infinite;
+}
+
+/* 3. Cybernetic CPU (Neural Trace Pulse) */
+@keyframes neural-pulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+.glyph-cybernetic-cpu .cpu-core {
+  transform-origin: center;
+  animation: neural-pulse 2s ease-in-out infinite;
+}
+
+/* 4. Ballistic Shield (Radar Sweep) */
+@keyframes radar-beam-sweep {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.glyph-ballistic-shield .radar-beam {
+  transform-origin: 12px 12px;
+  animation: radar-beam-sweep 3s linear infinite;
+}
+
+/* 5. Tactical Reticle (Crosshair Lock Pulse) */
+@keyframes reticle-lock {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(0.90); }
+}
+.glyph-tactical-reticle svg {
+  transform-origin: center;
+  animation: reticle-lock 2.4s ease-in-out infinite;
+}
+
+/* 6. Sonar Beacon (Concentric Radar Rings) */
+@keyframes sonar-ping {
+  0% { transform: scale(0.7); opacity: 0.2; }
+  50% { transform: scale(1.15); opacity: 0.9; }
+  100% { transform: scale(0.7); opacity: 0.2; }
+}
+.glyph-sonar-beacon .sonar-ring {
+  transform-origin: center;
+  animation: sonar-ping 2s ease-out infinite;
+}
+
+/* 7. Predator Skull (Demon Flare Crimson) */
+@keyframes demon-flare {
+  0%, 100% { filter: drop-shadow(0 0 2px rgba(239, 68, 68, 0.4)); opacity: 0.85; }
+  50% { filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.95)); opacity: 1; }
+}
+.glyph-predator-skull svg {
+  animation: demon-flare 1.2s ease-in-out infinite;
+}
+
+/* 8. Interlocking Gears (Opposing Cog Rotation) */
+@keyframes gear-cw {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes gear-ccw {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+.glyph-interlocking-gears .gear-primary {
+  transform-origin: 8px 8px;
+  animation: gear-cw 8s linear infinite;
+}
+.glyph-interlocking-gears .gear-secondary {
+  transform-origin: 16px 16px;
+  animation: gear-ccw 8s linear infinite;
+}
+
+/* 9. Orbital Cycle (Restoration / Refresh Loops) */
+@keyframes orbital-turn {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.glyph-orbital-cycle svg {
+  transform-origin: center;
+  transition: transform 0.4s ease;
+}
+.btn:hover .glyph-orbital-cycle svg,
+.btn-restore:hover .glyph-orbital-cycle svg,
+.glyph-orbital-cycle:hover svg {
+  animation: orbital-turn 0.8s linear infinite;
+}
+
+/* 10. Audio Chime (Frequency Equalizer Bars) */
+@keyframes bar-eq-1 { 0%, 100% { transform: scaleY(0.3); } 50% { transform: scaleY(0.9); } }
+@keyframes bar-eq-2 { 0%, 100% { transform: scaleY(0.8); } 50% { transform: scaleY(0.3); } }
+@keyframes bar-eq-3 { 0%, 100% { transform: scaleY(0.4); } 50% { transform: scaleY(1.0); } }
+@keyframes bar-eq-4 { 0%, 100% { transform: scaleY(0.7); } 50% { transform: scaleY(0.4); } }
+.glyph-audio-chime .eq-bar-1 { transform-origin: bottom; animation: bar-eq-1 1s ease-in-out infinite; }
+.glyph-audio-chime .eq-bar-2 { transform-origin: bottom; animation: bar-eq-2 1.3s ease-in-out infinite; }
+.glyph-audio-chime .eq-bar-3 { transform-origin: bottom; animation: bar-eq-3 0.9s ease-in-out infinite; }
+.glyph-audio-chime .eq-bar-4 { transform-origin: bottom; animation: bar-eq-4 1.1s ease-in-out infinite; }
+
+/* 11. Headshot Helmet (Impact Dink Spark) */
+@keyframes spark-flicker {
+  0%, 100% { opacity: 0.3; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.2); filter: drop-shadow(0 0 5px #FBBF24); }
+}
+.glyph-headshot-helmet .spark {
+  transform-origin: 17px 7px;
+  animation: spark-flicker 1.5s ease-in-out infinite;
+}
+
+/* 12. C4 Bomb (Ticking LED Indicator) */
+@keyframes c4-led {
+  0%, 100% { opacity: 1; fill: #EF4444; }
+  50% { opacity: 0.15; fill: #64748B; }
+}
+.glyph-c4-bomb .c4-led-dot {
+  animation: c4-led 1s steps(1) infinite;
+}
+
+/* 13. Cash Vault (Shimmer Diamond) */
+@keyframes cash-glow {
+  0%, 100% { filter: drop-shadow(0 0 2px rgba(245, 158, 11, 0.3)); }
+  50% { filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.8)); }
+}
+.glyph-cash-vault svg {
+  animation: cash-glow 2.5s ease-in-out infinite;
+}
+
+/* 14. Utility Nade (Safety Pin Pulse) */
+@keyframes nade-pin-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+.glyph-utility-nade .nade-pin {
+  transform-origin: 12px 6px;
+  animation: nade-pin-pulse 2s ease-in-out infinite;
+}
+
+/* 15. E-Pickup (Magnetic Weapon Attract) */
+@keyframes magnet-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+.glyph-e-pickup svg {
+  animation: magnet-bob 1.8s ease-in-out infinite;
+}
+
+/* 16. Switch Hands (Lateral Swap Slide) */
+@keyframes hands-slide {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(2px); }
+}
+.glyph-switch-hands .arrow-r {
+  animation: hands-slide 1.5s ease-in-out infinite;
+}
+
+/* 17. Ammo Clip (Bullet Feed Pulse) */
+@keyframes ammo-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+.glyph-ammo-clip .bullet-tip {
+  animation: ammo-pulse 1.6s ease-in-out infinite;
+}
+
+/* 18. Silencer Lock (Threaded Lock Snap) */
+@keyframes lock-bob {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+.glyph-silencer-lock .lock-shackle {
+  transform-origin: 12px 14px;
+  animation: lock-bob 3s ease-in-out infinite;
+}
+
+/* 19. Combat Knife (Blade Glint) */
+@keyframes blade-glint {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; filter: drop-shadow(0 0 4px #38BDF8); }
+}
+.glyph-combat-knife svg {
+  animation: blade-glint 2.2s ease-in-out infinite;
+}
+
+/* 20. 3D Ping (Tactical Waypoint Hover) */
+@keyframes ping-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+.glyph-3d-ping .ping-marker {
+  animation: ping-float 1.6s ease-in-out infinite;
+}
+
+/* 21. Server Terminal (Console Cursor Blink) */
+@keyframes cursor-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.glyph-server-terminal .term-cursor {
+  animation: cursor-blink 1s steps(1) infinite;
+}
+
+/* 22. Folder Vault (Storage Security Glow) */
+@keyframes vault-aura {
+  0%, 100% { filter: drop-shadow(0 0 2px rgba(245, 158, 11, 0.2)); }
+  50% { filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.6)); }
+}
+.glyph-folder-vault svg {
+  animation: vault-aura 2.8s ease-in-out infinite;
+}
+
+/* ==========================================================================
+   APP LAYOUT: COMMAND SIDEBAR + TELEMETRY HEADER + MAIN VIEWPORT
+   ========================================================================== */
+
+.app-wrapper {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Fixed Tactical Left Sidebar */
+.command-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--sidebar-width);
+  height: 100vh;
+  background: var(--void-surface);
+  border-right: 1px solid var(--border-glass);
+  backdrop-filter: blur(16px);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.sidebar-brand {
+  height: var(--header-height);
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(10, 14, 22, 0.7);
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.sidebar-brand .brand-pip {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tactical-amber);
+  box-shadow: 0 0 10px var(--tactical-amber);
+  animation: sonar-ping 2s infinite;
+}
+
+.sidebar-brand .brand-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tactical-amber);
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 10px;
+  flex: 1;
+}
+
+.nav-tab {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted-slate);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.nav-tab:hover {
+  background: var(--surface-container);
+  color: var(--text-main);
+  border-color: var(--border-glass);
+}
+
+.nav-tab.active {
+  background: var(--tactical-amber);
+  color: var(--void-base);
+  font-weight: 700;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.35);
+  border-color: var(--tactical-amber-bright);
+}
+
+.nav-tab.active .glyph svg {
+  stroke: var(--void-base);
+  fill: var(--void-base);
+}
+
+.sidebar-footer {
+  padding: 14px 16px;
+  background: rgba(10, 14, 22, 0.85);
+  border-top: 1px solid var(--border-glass);
+  margin: 10px;
+  border-radius: 8px;
+}
+
+.footer-telemetry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.telemetry-tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-slate);
+}
+
+.telemetry-status {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--emerald-safe);
+}
+
+.telemetry-version {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--cyber-cyan);
+}
+
+/* Fixed Telemetry Top Bar */
+.telemetry-header {
+  position: fixed;
+  top: 0;
+  left: var(--sidebar-width);
+  right: 0;
+  height: var(--header-height);
+  background: rgba(11, 17, 30, 0.88);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border-glass);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+}
+
+.header-left-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.hub-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hub-title-row h1 {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-main);
+}
+
+.badge-version {
+  background: var(--tactical-amber);
+  color: var(--void-base);
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.04em;
+}
+
+.header-right-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Studio Quick Link Badge */
+.studio-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-container);
+  border: 1px solid var(--border-glass);
+  padding: 6px 12px;
+  border-radius: 6px;
+  color: var(--text-main);
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.studio-badge:hover {
+  background: var(--surface-container-high);
+  border-color: var(--border-glass-bright);
+}
+
+.studio-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #64748B;
+  transition: all 0.3s ease;
+}
+
+.studio-dot.online {
+  background: var(--emerald-safe);
+  box-shadow: 0 0 8px var(--emerald-safe);
+}
+
+/* Profile Selector */
+.profile-vault-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-container-low);
+  border: 1px solid var(--border-glass);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.profile-select {
+  background: transparent;
+  border: none;
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.profile-select option {
+  background: var(--void-surface);
+  color: var(--text-main);
+}
+
+.btn-icon-ghost {
+  background: transparent;
+  border: none;
+  color: var(--muted-slate);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.btn-icon-ghost:hover {
+  color: var(--tactical-amber);
+  background: var(--surface-container);
+}
+
+.engine-status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-container-low);
+  border: 1px solid var(--border-glass);
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--cyber-cyan);
+}
+
+.engine-status-pill .status-pip {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cyber-cyan);
+  box-shadow: 0 0 6px var(--cyber-cyan);
+}
+
+/* ==========================================================================
+   MAIN VIEWPORT & TAB PANES
+   ========================================================================== */
+
+.viewport-main {
+  margin-left: var(--sidebar-width);
+  padding-top: calc(var(--header-height) + 20px);
+  padding-left: 24px;
+  padding-right: 24px;
+  padding-bottom: 32px;
+  flex: 1;
+  min-height: 100vh;
+}
+
+.tab-pane {
+  display: none;
+  animation: fadeIn 0.25s ease-out;
+}
+
+.tab-pane.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Section Header Toolbar */
+.section-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: var(--glass-panel);
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+  backdrop-filter: blur(12px);
+  margin-bottom: 20px;
+}
+
+.toolbar-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toolbar-title-wrap .title-with-accent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.accent-bar {
+  width: 4px;
+  height: 16px;
+  background: var(--tactical-amber);
+  border-radius: 2px;
+}
+
+.section-toolbar h2 {
+  font-size: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-main);
+}
+
+.section-toolbar p {
+  color: var(--muted-slate);
+  font-size: 12px;
+}
+
+/* ==========================================================================
+   BUTTONS & CONTROLS
+   ========================================================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+  outline: none;
+}
+
+.btn-primary {
+  background: var(--tactical-amber);
+  color: var(--void-base);
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+}
+
+.btn-primary:hover {
+  background: var(--tactical-amber-bright);
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.55);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(1px);
+}
+
+.btn-ghost {
+  background: var(--surface-container);
+  border-color: var(--border-glass);
+  color: var(--text-main);
+}
+
+.btn-ghost:hover {
+  background: var(--surface-container-high);
+  border-color: var(--border-glass-bright);
+}
+
+.btn-danger-ghost {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: var(--demon-crimson);
+}
+
+.btn-danger-ghost:hover {
+  background: var(--demon-crimson);
+  color: #fff;
+  box-shadow: 0 0 14px var(--demon-crimson-glow);
+}
+
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 11px;
+}
+
+/* Toggle Switches */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: var(--surface-container-highest);
+  transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 20px;
+  border: 1px solid var(--border-glass);
+}
+
+.switch-slider::before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 2px;
+  bottom: 2px;
+  background-color: var(--void-base);
+  border-radius: 50%;
+  transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.switch input:checked + .switch-slider {
+  background-color: var(--tactical-amber);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+}
+
+.switch input:checked + .switch-slider::before {
+  transform: translateX(18px);
+}
+
+.switch-lg {
+  width: 52px;
+  height: 28px;
+}
+
+.switch-lg .switch-slider::before {
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+}
+
+.switch-lg input:checked + .switch-slider::before {
+  transform: translateX(24px);
+}
+
+.switch-crimson input:checked + .switch-slider {
+  background-color: var(--demon-crimson);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+}
+
+/* ==========================================================================
+   CARDS & BENTO GRIDS
+   ========================================================================== */
+
+.card {
+  background: var(--glass-panel);
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  margin-bottom: 20px;
+}
+
+.card-header {
+  padding: 14px 18px;
+  background: var(--surface-container-lowest);
+  border-bottom: 1px solid var(--border-glass);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.card-header h3 {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-main);
+}
+
+.card-header p {
+  font-size: 11px;
+  color: var(--muted-slate);
+}
+
+.card-body {
+  padding: 18px;
+}
+
+/* Hero Master Switch Cards */
+.master-hero-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 24px;
+  background: var(--glass-panel-elevated);
+  border: 1px solid var(--border-glass-bright);
+  border-radius: 12px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.master-hero-card::after {
+  content: "";
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: var(--tactical-amber);
+  filter: blur(60px);
+  opacity: 0.08;
+  pointer-events: none;
+}
+
+.master-hero-left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.hero-reactor-emblem {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: var(--surface-container);
+  border: 1px solid var(--border-glass-bright);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tactical-amber);
+}
+
+.master-hero-left h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.master-hero-left p {
+  color: var(--muted-slate);
+  font-size: 12px;
+  margin-top: 4px;
+  max-width: 650px;
+}
+
+/* 5 Column Plugin Grid */
+.plugin-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.plugin-card {
+  background: var(--surface-container-lowest);
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+}
+
+.plugin-card:hover {
+  background: var(--surface-container-low);
+  border-color: var(--border-glass-bright);
+}
+
+.plugin-card-top {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.plugin-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--tactical-amber);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.plugin-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.plugin-desc {
+  font-size: 11px;
+  color: var(--muted-slate);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.plugin-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-glass);
+}
+
+.plugin-status-txt {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.plugin-status-txt.loaded { color: var(--emerald-safe); }
+.plugin-status-txt.disabled { color: var(--muted-slate); }
+
+/* Submodules Grid */
+.submodules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: rgba(10, 14, 22, 0.4);
+  border-radius: 6px;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.toggle-row:hover {
+  background: var(--surface-container-lowest);
+  border-color: var(--border-glass);
+}
+
+.toggle-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.toggle-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.toggle-desc {
+  font-size: 11px;
+  color: var(--muted-slate);
+}
+
+.slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: rgba(10, 14, 22, 0.4);
+  border-radius: 6px;
+}
+
+.slider-label-wrap {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted-slate);
+}
+
+.slider-val {
+  font-family: var(--font-mono);
+  color: var(--cyber-cyan);
+}
+
+.range-slider {
+  width: 100%;
+  height: 5px;
+  background: var(--surface-container-highest);
+  border-radius: 3px;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--tactical-amber);
+  cursor: pointer;
+  box-shadow: 0 0 8px var(--tactical-amber);
+}
+
+/* ==========================================================================
+   TAB 2: COMPETITIVE MATCH & LIVE HUD PREVIEW
+   ========================================================================== */
+
+.comp-config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.preset-button-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.comp-select, .comp-input {
+  background: var(--surface-container-lowest);
+  border: 1px solid var(--border-glass);
+  color: var(--text-main);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  outline: none;
+  width: 100%;
+  transition: border-color 0.2s ease;
+}
+
+.comp-select:focus, .comp-input:focus {
+  border-color: var(--tactical-amber);
+}
+
+/* Live Tournament HUD Cards Preview */
+.hud-preview-dock {
+  background: var(--void-surface);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+.hud-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.hud-title-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hud-title-left h3 {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-main);
+}
+
+.hud-badge-sim {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  background: var(--surface-container);
+  color: var(--muted-slate);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.hud-cards-viewport {
+  display: grid;
+  grid-template-columns: 7fr 5fr;
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .hud-cards-viewport {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Damage Summary Simulation Card */
+.hud-card-damage {
+  background: var(--surface-container-low);
+  border: 1px solid var(--border-glass-bright);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.3s ease;
+}
+
+.hud-card-damage.disabled {
+  opacity: 0.35;
+  filter: grayscale(0.9);
+  pointer-events: none;
+}
+
+.damage-card-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  margin-bottom: 12px;
+}
+
+.round-summary-label {
+  color: var(--tactical-amber);
+  font-weight: 700;
+}
+
+.win-bonus-label {
+  color: var(--cyber-cyan);
+}
+
+.combatants-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.combatant-cell {
+  background: var(--surface-container);
+  border-radius: 6px;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.team-badge {
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+}
+
+.team-badge.ct { background: rgba(56, 189, 248, 0.2); color: var(--cyber-cyan); }
+.team-badge.t { background: rgba(239, 68, 68, 0.2); color: var(--demon-crimson); }
+
+.combatant-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.player-name { font-size: 12px; font-weight: 700; }
+.player-status-safe { font-size: 10px; color: var(--emerald-safe); }
+.player-status-elim { font-size: 10px; color: var(--demon-crimson); }
+
+.combatant-stats {
+  text-align: right;
+  font-family: var(--font-mono);
+}
+
+.stat-kills { font-size: 12px; font-weight: 800; color: var(--tactical-amber); }
+.stat-dmg { font-size: 10px; color: var(--muted-slate); }
+
+.damage-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.damage-bar-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--muted-slate);
+}
+
+.damage-track {
+  width: 100%;
+  height: 5px;
+  background: var(--surface-container-highest);
+  border-radius: 3px;
+  display: flex;
+  overflow: hidden;
+}
+
+.bar-ct { width: 68%; background: var(--cyber-cyan); }
+.bar-t { width: 32%; background: var(--demon-crimson); }
+
+/* MVP Star Showcase Card */
+.hud-card-mvp {
+  background: var(--surface-container-low);
+  border: 1px solid var(--border-glass-bright);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.hud-card-mvp.disabled {
+  opacity: 0.35;
+  filter: grayscale(0.9);
+  pointer-events: none;
+}
+
+.hud-card-mvp::before {
+  content: "";
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: var(--tactical-amber);
+  filter: blur(40px);
+  opacity: 0.12;
+}
+
+.mvp-header-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--tactical-amber);
+  text-transform: uppercase;
+}
+
+.mvp-player-spotlight {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 14px 0;
+}
+
+.mvp-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--surface-container-high);
+  border: 2px solid var(--tactical-amber);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--tactical-amber);
+}
+
+.mvp-accolade {
+  display: flex;
+  flex-direction: column;
+}
+
+.mvp-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mvp-name { font-size: 15px; font-weight: 800; }
+.mvp-star-tag {
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--tactical-amber);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.mvp-desc { font-size: 11px; color: var(--muted-slate); margin-top: 2px; }
+
+.mvp-rating-strip {
+  display: flex;
+  justify-content: space-around;
+  background: var(--surface-container);
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--muted-slate);
+}
+
+.mvp-rating-val { color: var(--emerald-safe); font-weight: 800; }
+
+/* ==========================================================================
+   TAB 3: BOTS & SAVAGE AI CENTER
+   ========================================================================== */
+
+/* 4-Tier Preset Cards */
+.ai-presets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.preset-card {
+  background: var(--surface-container-low);
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+}
+
+.preset-card:hover {
+  background: var(--surface-container);
+  border-color: var(--border-glass-bright);
+}
+
+.preset-card.active {
+  border-color: var(--tactical-amber);
+  box-shadow: 0 0 16px var(--tactical-amber-glow);
+  background: var(--surface-container);
+}
+
+.preset-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.preset-tier-badge {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.preset-tier-badge.tier-1 { background: rgba(16, 185, 129, 0.15); color: var(--emerald-safe); }
+.preset-tier-badge.tier-2 { background: rgba(56, 189, 248, 0.15); color: var(--cyber-cyan); }
+.preset-tier-badge.tier-3 { background: rgba(245, 158, 11, 0.15); color: var(--tactical-amber); }
+.preset-tier-badge.tier-4 { background: rgba(239, 68, 68, 0.15); color: var(--demon-crimson); }
+
+.preset-title { font-size: 14px; font-weight: 700; color: var(--text-main); }
+.preset-subtitle { font-size: 11px; color: var(--muted-slate); margin-bottom: 10px; }
+
+.preset-features-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+  font-size: 11px;
+}
+
+.preset-features-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+}
+
+/* 16 Granular AI Switches (4x4 Bento Grid) */
+.matrix-4x4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 1100px) {
+  .matrix-4x4 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 650px) {
+  .matrix-4x4 { grid-template-columns: 1fr; }
+}
+
+.matrix-cell {
+  background: var(--surface-container-low);
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+}
+
+.matrix-cell:hover {
+  background: var(--surface-container);
+  border-color: var(--border-glass-bright);
+}
+
+.matrix-cell.cheat-cell {
+  border-color: rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.04);
+}
+
+.matrix-cell.cheat-cell:hover {
+  border-color: rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.matrix-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.matrix-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.matrix-desc {
+  font-size: 10px;
+  color: var(--muted-slate);
+}
+
+.cheat-tag {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--demon-crimson);
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+/* ==========================================================================
+   TAB 4: SAFETY & BACKUPS
+   ========================================================================== */
+
+.backup-telemetry-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.telemetry-card {
+  background: var(--glass-panel);
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.telemetry-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-slate);
+  margin-bottom: 8px;
+}
+
+.telemetry-stat-big {
+  font-size: 24px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--text-main);
+}
+
+.telemetry-subtext {
+  font-size: 11px;
+  color: var(--muted-slate);
+  margin-top: 4px;
+}
+
+/* Search and Filter Bar */
+.manifest-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 18px;
+  background: var(--surface-container-lowest);
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.search-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 280px;
+}
+
+.search-input-wrap .search-icon {
+  position: absolute;
+  left: 10px;
+  pointer-events: none;
+  color: var(--muted-slate);
+}
+
+.search-input {
+  width: 100%;
+  background: var(--surface-container-low);
+  border: 1px solid var(--border-glass);
+  border-radius: 6px;
+  padding: 6px 12px 6px 32px;
+  font-size: 12px;
+  color: var(--text-main);
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.search-input:focus {
+  border-color: var(--tactical-amber);
+}
+
+/* Backups Table */
+.backups-table-wrap {
+  overflow-x: auto;
+}
+
+.backups-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.backups-table th {
+  padding: 12px 18px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-slate);
+  background: var(--surface-container-low);
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.backups-table td {
+  padding: 12px 18px;
+  font-size: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: var(--text-main);
+}
+
+.backups-table tbody tr:hover {
+  background: var(--surface-container-low);
+}
+
+.model-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.weapon-cat-tag {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--surface-container);
+  color: var(--muted-slate);
+}
+
+.path-cell {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted-slate);
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sha256-cell {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--cyber-cyan);
+}
+
+/* ==========================================================================
+   CONSOLE TELEMETRY DOCK (BOTTOM DOCK)
+   ========================================================================== */
+
+.console-telemetry-dock {
+  background: var(--void-surface);
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+  margin-top: 24px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.console-dock-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--surface-container-lowest);
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.console-dock-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-main);
+}
+
+.console-dock-body {
+  height: 110px;
+  overflow-y: auto;
+  padding: 10px 16px;
+  background: rgba(8, 12, 20, 0.85);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted-slate);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* Toast Container */
+#toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toast {
+  background: var(--glass-panel-elevated);
+  border: 1px solid var(--tactical-amber);
+  color: var(--text-main);
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+  animation: toastIn 0.25s ease-out;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

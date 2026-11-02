@@ -1,0 +1,34 @@
+# Git Exclusions for CS 1.6 EmptyX Customization
+
+# Python & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+
+# Temporary & Editor caches
+*.tmp
+*.log
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Large Modpack Archives & Backups
+my_mods/exports/*.zip
+!my_mods/exports/.gitkeep
+my_mods/staging/*.zip
+!my_mods/staging/.gitkeep
+*.orig.mdl
+*.bak
+.studio_backups/
+
+# System generated
+.system_generated/

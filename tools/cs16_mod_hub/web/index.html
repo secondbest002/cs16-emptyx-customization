@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CS 1.6 MOD HUB PRO - Tactical HUD</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-wrapper">
+
+    <!-- ============================================================= -->
+    <!-- FIXED TACTICAL LEFT SIDEBAR                                    -->
+    <!-- ============================================================= -->
+    <aside class="command-sidebar">
+      <div>
+        <div class="sidebar-brand">
+          <span class="brand-pip"></span>
+          <span class="brand-title">TACTICAL SUBSYSTEMS</span>
+        </div>
+
+        <nav class="sidebar-nav">
+          <button class="nav-tab active" data-tab="gameplay-mods" type="button">
+            <span class="glyph glyph-audio-chime"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line class="eq-bar-1" x1="4" y1="18" x2="4" y2="6"/><line class="eq-bar-2" x1="9" y1="18" x2="9" y2="3"/><line class="eq-bar-3" x1="15" y1="18" x2="15" y2="8"/><line class="eq-bar-4" x1="20" y1="18" x2="20" y2="5"/></svg></span>
+            <span>Gameplay Engine</span>
+          </button>
+          <button class="nav-tab" data-tab="competitive-match" type="button">
+            <span class="glyph glyph-tournament-aegis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2L4 5V11C4 16.5 7.4 21.6 12 23C16.6 21.6 20 16.5 20 11V5L12 2Z"/><path class="laser-line" d="M12 7L16 11H8L12 15" stroke-width="1.5"/></svg></span>
+            <span>Competitive Match</span>
+          </button>
+          <button class="nav-tab" data-tab="bots-ecosystem" type="button">
+            <span class="glyph glyph-cybernetic-cpu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12,2 21,7 21,17 12,22 3,17 3,7"/><rect class="cpu-core" x="9" y="9" width="6" height="6" rx="1" fill="currentColor"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="3" y1="12" x2="7" y2="12"/><line x1="17" y1="12" x2="21" y2="12"/></svg></span>
+            <span>Bots &amp; AI Center</span>
+          </button>
+          <button class="nav-tab" data-tab="safety-center" type="button">
+            <span class="glyph glyph-ballistic-shield"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2L3 6V12C3 17.5 6.8 22.3 12 24C17.2 22.3 21 17.5 21 12V6L12 2Z"/><circle cx="12" cy="12" r="6" stroke-dasharray="2 3"/><line class="radar-beam" x1="12" y1="12" x2="17" y2="7" stroke-width="2"/></svg></span>
+            <span>Safety &amp; Backups</span>
+          </button>
+          <button class="nav-tab" data-tab="skin-studio-tab" type="button">
+            <span class="glyph glyph-tactical-reticle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2" fill="currentColor"/><line x1="12" y1="2" x2="12" y2="7"/><line x1="12" y1="17" x2="12" y2="22"/><line x1="2" y1="12" x2="7" y2="12"/><line x1="17" y1="12" x2="22" y2="12"/></svg></span>
+            <span>Skin Studio :5160</span>
+          </button>
+        </nav>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="footer-telemetry">
+          <span class="telemetry-tag">ENGINE KERNEL</span>
+          <span class="telemetry-status">ONLINE</span>
+        </div>
+        <div class="telemetry-version">
+          <span class="glyph glyph-sm glyph-server-terminal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 10,12 6,15"/><line class="term-cursor" x1="12" y1="15" x2="16" y2="15"/></svg></span>
+          <span>HLDS v1.6.8684-PRO</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ============================================================= -->
+    <!-- FIXED TOP TELEMETRY HEADER                                    -->
+    <!-- ============================================================= -->
+    <header class="telemetry-header">
+      <div class="header-left-group">
+        <div class="hub-title-row">
+          <span class="glyph glyph-lg glyph-core-reactor" style="color: var(--tactical-amber);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="7,2 17,2 22,7 22,17 17,22 7,22 2,17 2,7"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/></svg></span>
+          <h1>CS 1.6 MOD HUB</h1>
+          <span class="badge-version">v4.0 PRO</span>
+        </div>
+      </div>
+
+      <div class="header-right-group">
+        <!-- Asset Studio Quick Link -->
+        <a id="btn-studio-quicklink" class="studio-badge" href="http://127.0.0.1:5160/" target="_blank" title="Launch CS 1.6 Asset Studio">
+          <span class="studio-dot" id="studio-status-dot"></span>
+          <span>Asset Studio :5160</span>
+          <span class="glyph glyph-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
+        </a>
+
+        <!-- Active Skin Profile -->
+        <div class="profile-vault-box">
+          <span class="glyph glyph-folder-vault" style="color: var(--tactical-amber);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6C3 4.9 3.9 4 5 4H10L12 6H19C20.1 6 21 6.9 21 8V18C21 19.1 20.1 20 19 20H5C3.9 20 3 19.1 3 18V6Z"/><circle cx="12" cy="13" r="2" fill="currentColor"/></svg></span>
+          <select id="sel-profile" class="profile-select" title="Active Model Profile"></select>
+          <button id="btn-open-folder" class="btn-icon-ghost" title="Open Directory in Windows Explorer" type="button">
+            <span class="glyph glyph-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+          </button>
+        </div>
+
+        <!-- Engine Parity Status Pill -->
+        <div class="engine-status-pill">
+          <span class="status-pip"></span>
+          <span id="txt-engine-badge">GoldSrc Synced</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ============================================================= -->
+    <!-- MAIN VIEWPORT CONTENT                                         -->
+    <!-- ============================================================= -->
+    <main class="viewport-main">
+
+      <!-- ============================================================= -->
+      <!-- TAB 1: GAMEPLAY ENGINE & CS2 MODERN SYSTEMS                   -->
+      <!-- ============================================================= -->
+      <section id="tab-gameplay-mods" class="tab-pane active">
+        <!-- Section Toolbar -->
+        <div class="section-toolbar">
+          <div class="toolbar-title-wrap">
+            <div class="title-with-accent">
+              <span class="accent-bar"></span>
+              <h2>Core Gameplay &amp; CS2 Modern Mechanics</h2>
+            </div>
+            <p>Manage AMX Mod X plugins and customize 10 unified modern gameplay systems</p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <button id="btn-save-cs2-engine" class="btn btn-primary" type="button">
+              <span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span>
+              <span>Save Engine Settings</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Master Switch Hero Card -->
+        <div class="master-hero-card">
+          <div class="master-hero-left">
+            <div class="hero-reactor-emblem">
+              <span class="glyph glyph-xl glyph-core-reactor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="7,2 17,2 22,7 22,17 17,22 7,22 2,17 2,7"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/></svg></span>
+            </div>
+            <div>
+              <h3>
+                <span>CS2 Modern Unified Engine Master Switch</span>
+                <span style="font-size: 10px; font-weight: 800; background: rgba(245, 158, 11, 0.2); color: var(--tactical-amber); padding: 2px 6px; border-radius: 3px; letter-spacing: 0.06em;">GLOBAL HOOK</span>
+              </h3>
+              <p>Controls all 10 unified modern modules: chimes, rewards, 3-way nades, e-pickup, switchhands, auto ammo, silencer lock, ping.</p>
+            </div>
+          </div>
+          <label class="switch switch-lg">
+            <input type="checkbox" id="chk-master-cs2-engine" data-engine-cvar="amx_cs2_engine">
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+
+        <!-- AMXX Active Plugins 5-Column Grid -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-left">
+              <span class="glyph glyph-interlocking-gears" style="color: var(--cyber-cyan);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle class="gear-primary" cx="9" cy="9" r="4"/><circle class="gear-primary" cx="9" cy="9" r="1.5" fill="currentColor"/><circle class="gear-secondary" cx="16" cy="16" r="3.5"/><circle class="gear-secondary" cx="16" cy="16" r="1.2" fill="currentColor"/></svg></span>
+              <div>
+                <h3>Active Gameplay Plugins</h3>
+                <p>Non-destructively toggled in <code>plugins.ini</code></p>
+              </div>
+            </div>
+            <span style="font-size: 10px; font-weight: 700; color: var(--muted-slate); letter-spacing: 0.08em; text-transform: uppercase;">5 MODULES ARMED</span>
+          </div>
+          <div class="card-body">
+            <div class="plugin-cards-grid" id="plugin-cards-container">
+              <!-- Dynamically populated via JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 10 CS2 Modern Gameplay Submodules (Bento Grid) -->
+        <div class="submodules-grid">
+
+          <!-- Card 1: Kill Feedback & Audio Dink -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-left">
+                <span class="glyph glyph-headshot-helmet" style="color: var(--tactical-amber);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 14C4 8.5 7.6 4 12 4C16.4 4 20 8.5 20 14V17H4V14Z"/><path d="M3 17H21V19C21 19.6 20.6 20 20 20H4C3.4 20 3 19.6 3 19V17Z"/><polygon class="spark" points="17,5 19,7 17,9 15,7" fill="currentColor"/></svg></span>
+                <div>
+                  <h3>Kill Feedback &amp; Sounds</h3>
+                  <p>Audio cues &amp; skull indicators</p>
+                </div>
+              </div>
+            </div>
+            <div class="card-body form-stack">
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">Progressive Kill Chimes</span>
+                  <span class="toggle-desc">Authentic 1K to 5K Ace notes</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-cs2-kill-chimes" data-engine-cvar="amx_cs2_kill_chimes">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">Headshot Dink Sound</span>
+                  <span class="toggle-desc">Sharp metallic helmet impact audio</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-cs2-hs-dink" data-engine-cvar="amx_cs2_headshot_dink">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">C4 10-Second Warning</span>
+                  <span class="toggle-desc">Tension music when bomb is critical</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-cs2-c4-warning" data-engine-cvar="amx_cs2_c4_warning">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">Bottom Skull HUD Cards</span>
+                  <span class="toggle-desc">Kill streak card indicators</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-cs2-hud-cards" data-engine-cvar="amx_cs2_hud_cards">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Kill Cash Rewards Economy -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-left">
+                <span class="glyph glyph-cash-vault" style="color: var(--emerald-safe);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12,2 22,8.5 12,15 2,8.5"/><polygon points="2,12 12,18.5 22,12"/><polygon points="2,15.5 12,22 22,15.5"/></svg></span>
+                <div>
+                  <h3>Kill Cash Rewards</h3>
+                  <p>Weapon-specific economy balance</p>
+                </div>
+              </div>
+            </div>
+            <div class="card-body form-stack">
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">CS2 Kill Cash Rewards</span>
+                  <span class="toggle-desc">+$300 Rifle, +$600 SMG/Shotgun, +$1500 Knife</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-cs2-kill-reward" data-engine-cvar="amx_cs2_kill_reward">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">Cash HUD Notifications</span>
+                  <span class="toggle-desc">Display +$300 green screen popups</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-cs2-kill-reward-notify" data-engine-cvar="amx_cs2_kill_reward_notify">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Utility & Grenades -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-left">
+                <span class="glyph glyph-utility-nade" style="color: var(--cyber-cyan);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle class="nade-pin" cx="9" cy="4" r="2"/><rect x="8" y="7" width="8" height="13" rx="4"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="16" y2="15"/></svg></span>
+                <div>
+                  <h3>Utility &amp; Grenades</h3>
+                  <p>3-way throws &amp; smoke dispersion</p>
+                </div>
+              </div>
+            </div>
+            <div class="card-body form-stack">
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">3-Way Grenade Throw Strength</span>
+                  <span class="toggle-desc">Primary (Far), Secondary (Short), Both (Medium)</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-cs2-throw-strength" data-engine-cvar="amx_cs2_throw_strength">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">Bullet Smoke Dispersion</span>
+                  <span class="toggle-desc">Rifle bursts carve sightlines in smoke clouds</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-cs2-smoke-bullets" data-engine-cvar="amx_cs2_smoke_bullets">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">HE Smoke Disperse</span>
+                  <span class="toggle-desc">HE grenade blast clears smoke for 3 seconds</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-cs2-smoke-disperse" data-engine-cvar="amx_cs2_smoke_disperse">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">Drop Grenades ('G' Key)</span>
+                  <span class="toggle-desc">Pass flashes and smokes to teammates</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-cs2-drop-nades" data-engine-cvar="amx_cs2_drop_nades">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4: Tactical Weapon Pickup ('E' Key) -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-left">
+                <span class="glyph glyph-e-pickup" style="color: var(--tactical-amber);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M9 8H15M9 12H13M9 16H15" stroke-width="2"/></svg></span>
+                <div>
+                  <h3>Tactical Weapon Pickup</h3>
+                  <p>Use key weapon grabbing</p>
+                </div>
+              </div>
+            </div>
+            <div class="card-body form-stack">
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">Enable Pickup via +use ('E')</span>
+                  <span class="toggle-desc">Grab guns at distance without walking over</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-cs2-epickup" data-engine-cvar="amx_cs2_epickup">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+              <div class="slider-row">
+                <div class="slider-label-wrap">
+                  <span>Pickup Radius</span>
+                  <span class="slider-val" id="val-cs2-epickup-radius">75 units</span>
+                </div>
+                <input type="range" class="range-slider" id="rng-cs2-epickup-radius" min="40" max="150" value="75" data-engine-cvar="amx_cs2_epickup_radius">
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 5: Switchhands & Buy Refund -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-left">
+                <span class="glyph glyph-switch-hands" style="color: var(--cyber-cyan);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 4L21 8L17 12"/><path d="M21 8H7A4 4 0 0 0 3 12"/><path class="arrow-r" d="M7 20L3 16L7 12"/><path class="arrow-r" d="M3 16H17A4 4 0 0 0 21 12"/></svg></span>
+                <div>
+                  <h3>Switchhands &amp; Buy Refund</h3>
+                  <p>Left/Right hand toggle and buy undo</p>
+                </div>
+              </div>
+            </div>
+            <div class="card-body form-stack">
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">Switchhands ('H' key)</span>
+                  <span class="toggle-desc">Instant Left/Right hand viewmodel toggle</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-switchhands-enable" data-engine-cvar="amx_switchhands_enable">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">Buy Menu Refund</span>
+                  <span class="toggle-desc">Full cash refund for accidental purchases</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-cs2-buy-refund" data-engine-cvar="amx_cs2_buy_refund">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 6: Auto Ammo Refill & USP-S Silencer Lock -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-left">
+                <span class="glyph glyph-ammo-clip" style="color: var(--emerald-safe);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3H16L18 21H8L6 3Z"/><circle class="bullet-tip" cx="12" cy="7" r="1.5" fill="currentColor"/><circle class="bullet-tip" cx="12" cy="12" r="1.5" fill="currentColor"/><circle class="bullet-tip" cx="12" cy="17" r="1.5" fill="currentColor"/></svg></span>
+                <div>
+                  <h3>Auto Ammo &amp; USP-S Lock</h3>
+                  <p>Automatic reserve reload &amp; silencer lock</p>
+                </div>
+              </div>
+            </div>
+            <div class="card-body form-stack">
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">Auto Ammo on Buy / Spawn</span>
+                  <span class="toggle-desc">Reserve ammo fills automatically without buying</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-csgo-ammo" data-engine-cvar="amx_csgo_ammo">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">USP-S Silencer Permanently Attached</span>
+                  <span class="toggle-desc">Blocks accidental silencer detaching via Right-Click</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-usps-lock" data-engine-cvar="amx_usps_lock">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 7: Smart Knife & 3D Tactical Ping -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-left">
+                <span class="glyph glyph-3d-ping" style="color: var(--tactical-amber);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon class="ping-marker" points="12,2 17,7 12,14 7,7" fill="currentColor"/><ellipse cx="12" cy="19" rx="6" ry="2.5"/><ellipse cx="12" cy="19" rx="3" ry="1.2"/></svg></span>
+                <div>
+                  <h3>Smart Knife &amp; 3D Ping</h3>
+                  <p>CS2 knife audio &amp; waypoint marker</p>
+                </div>
+              </div>
+            </div>
+            <div class="card-body form-stack">
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">CS2 Authentic Knife Sounds</span>
+                  <span class="toggle-desc">Crisp draw, slash, and backstab audio</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-cs2-knife-sounds" data-engine-cvar="amx_cs2_knife_sounds">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">3D Tactical Ping Marker</span>
+                  <span class="toggle-desc">Apex/CS2 style waypoint with bot AI reaction</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-cs2-ping" data-engine-cvar="amx_cs2_ping">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+              <div class="slider-row">
+                <div class="slider-label-wrap">
+                  <span>Ping Cooldown</span>
+                  <span class="slider-val" id="val-cs2-ping-cooldown">2.5s</span>
+                </div>
+                <input type="range" class="range-slider" id="rng-cs2-ping-cooldown" min="1" max="6" step="0.5" value="2.5" data-engine-cvar="amx_cs2_ping_cooldown">
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ============================================================= -->
+      <!-- TAB 2: COMPETITIVE MATCH ENGINE & LIVE HUD PREVIEW            -->
+      <!-- ============================================================= -->
+      <section id="tab-competitive-match" class="tab-pane">
+        <!-- Section Toolbar -->
+        <div class="section-toolbar">
+          <div class="toolbar-title-wrap">
+            <div class="title-with-accent">
+              <span class="accent-bar"></span>
+              <h2>Competitive Match Configurator &amp; Tournament HUD</h2>
+            </div>
+            <p>MR12/MR15 regulation rules, tournament overtime, and live CS2 HUD overlay preview</p>
+          </div>
+          <button id="btn-save-comp" class="btn btn-primary" type="button">
+            <span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span>
+            <span>Save Competitive Config</span>
+          </button>
+        </div>
+
+        <!-- 1-Click Tournament Presets -->
+        <div class="preset-button-row">
+          <button class="btn btn-ghost" id="preset-valve-major" type="button">
+            <span class="glyph glyph-tournament-aegis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2L4 5V11C4 16.5 7.4 21.6 12 23C16.6 21.6 20 16.5 20 11V5L12 2Z"/></svg></span>
+            <span>Valve Major (CS2 MR12)</span>
+          </button>
+          <button class="btn btn-ghost" id="preset-esl-pro" type="button">
+            <span class="glyph glyph-tournament-aegis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2L4 5V11C4 16.5 7.4 21.6 12 23C16.6 21.6 20 16.5 20 11V5L12 2Z"/></svg></span>
+            <span>ESL Pro (CS:GO MR15)</span>
+          </button>
+          <button class="btn btn-ghost" id="preset-cpl-wcg" type="button">
+            <span class="glyph glyph-tournament-aegis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2L4 5V11C4 16.5 7.4 21.6 12 23C16.6 21.6 20 16.5 20 11V5L12 2Z"/></svg></span>
+            <span>CPL / WCG (Classic 1.6)</span>
+          </button>
+        </div>
+
+        <!-- Configuration Grid -->
+        <div class="comp-config-grid">
+          <!-- Column 1: Match Rules & Overtime -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-left">
+                <span class="glyph glyph-tournament-aegis" style="color: var(--tactical-amber);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2L4 5V11C4 16.5 7.4 21.6 12 23C16.6 21.6 20 16.5 20 11V5L12 2Z"/></svg></span>
+                <div>
+                  <h3>Tournament Rules</h3>
+                  <p>Regulation rounds &amp; match format</p>
+                </div>
+              </div>
+            </div>
+            <div class="card-body form-stack">
+              <div class="form-stack">
+                <label style="font-size: 11px; font-weight: 700; color: var(--muted-slate); text-transform: uppercase;">Max Rounds Format</label>
+                <select id="sel-comp-maxrounds" class="comp-select" data-comp-cvar="amx_csgo_maxrounds">
+                  <option value="12">24 Rounds (MR12 - CS2 Regulation)</option>
+                  <option value="15">30 Rounds (MR15 - Classic Competitive)</option>
+                  <option value="8">16 Rounds (MR8 - Short Match)</option>
+                </select>
+              </div>
+
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">Competitive Match Engine Active</span>
+                  <span class="toggle-desc">Enable tournament scoring &amp; halftime swap</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-comp-mode" data-comp-cvar="amx_csgo_mode">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">Knife Round on Match Start</span>
+                  <span class="toggle-desc">Winners pick starting team side</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-comp-knife" data-comp-cvar="amx_csgo_kniferound">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">Bot Auto-Ready</span>
+                  <span class="toggle-desc">Bots ready up automatically during warmup</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-comp-bot-ready" data-comp-cvar="amx_csgo_bot_autoready">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 2: Timers & Overlay HUD Switches -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-left">
+                <span class="glyph glyph-c4-bomb" style="color: var(--cyber-cyan);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><circle class="c4-led-dot" cx="7" cy="9" r="1.5"/><rect x="11" y="8" width="7" height="8" rx="1"/></svg></span>
+                <div>
+                  <h3>Timers &amp; HUD Cards</h3>
+                  <p>Clock precision and post-round cards</p>
+                </div>
+              </div>
+            </div>
+            <div class="card-body form-stack">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-stack">
+                  <label style="font-size: 11px; font-weight: 700; color: var(--muted-slate); text-transform: uppercase;">C4 Timer (seconds)</label>
+                  <select id="sel-comp-c4timer" class="comp-select" data-comp-cvar="mp_c4timer">
+                    <option value="40">40s (CS2 / Major Standard)</option>
+                    <option value="35">35s (Classic 1.6 Standard)</option>
+                    <option value="45">45s (Casual Extended)</option>
+                  </select>
+                </div>
+
+                <div class="form-stack">
+                  <label style="font-size: 11px; font-weight: 700; color: var(--muted-slate); text-transform: uppercase;">Round Time (mins)</label>
+                  <select id="sel-comp-roundtime" class="comp-select" data-comp-cvar="mp_roundtime">
+                    <option value="1.92">1:55 (CS2 Regulation)</option>
+                    <option value="2.0">2:00 (Classic Competitive)</option>
+                    <option value="1.75">1:45 (Fast Blitz)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">Dynamic Loss Bonus</span>
+                  <span class="toggle-desc">Consecutive loss bonus escalation ($1400 - $3400)</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-comp-lossbonus" data-comp-cvar="amx_csgo_lossbonus">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">End-of-Round Damage Card</span>
+                  <span class="toggle-desc">CS2 summary card of damage given &amp; received</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-comp-dmg-card" data-comp-cvar="amx_csgo_dmg_card">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">MVP Star Card</span>
+                  <span class="toggle-desc">Celebration card for round MVP</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-comp-mvp-card" data-comp-cvar="amx_csgo_mvp_card">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 3: Tactical Timeouts & Freeze Time -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-left">
+                <span class="glyph glyph-pause-circle" style="color: var(--tactical-amber);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="10" y1="15" x2="10" y2="9"/><line x1="14" y1="15" x2="14" y2="9"/></svg></span>
+                <div>
+                  <h3>Tactical Timeouts &amp; Freeze Time</h3>
+                  <p>Tournament break quotas and freeze duration</p>
+                </div>
+              </div>
+            </div>
+            <div class="card-body form-stack">
+              <div class="form-stack">
+                <label style="font-size: 11px; font-weight: 700; color: var(--muted-slate); text-transform: uppercase;">Tactical Timeouts (per Half)</label>
+                <select id="sel-comp-timeouts" class="comp-select" data-comp-cvar="amx_csgo_timeouts">
+                  <option value="1">1 Timeout per Half (CS2 / Major Standard)</option>
+                  <option value="2">2 Timeouts per Half</option>
+                  <option value="3">3 Timeouts per Half (Overtime Standard)</option>
+                  <option value="0">0 (Disabled)</option>
+                </select>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-stack">
+                  <label style="font-size: 11px; font-weight: 700; color: var(--muted-slate); text-transform: uppercase;">Timeout Duration</label>
+                  <select id="sel-comp-timeout-duration" class="comp-select" data-comp-cvar="amx_csgo_timeout_duration">
+                    <option value="60">60s (CS:GO Standard)</option>
+                    <option value="30">30s (CS2 Regulation)</option>
+                    <option value="45">45s (Tournament)</option>
+                  </select>
+                </div>
+
+                <div class="form-stack">
+                  <label style="font-size: 11px; font-weight: 700; color: var(--muted-slate); text-transform: uppercase;">Freeze Time</label>
+                  <select id="sel-comp-freezetime" class="comp-select" data-comp-cvar="mp_freezetime">
+                    <option value="20">20s (CS2 / FACEIT)</option>
+                    <option value="15">15s (Classic 1.6)</option>
+                    <option value="10">10s (Fast Play)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">Cinematic ScreenFade</span>
+                  <span class="toggle-desc">Smooth tint on timeout, halftime &amp; victory</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-comp-screenfade" data-comp-cvar="amx_csgo_screenfade">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">Modern Top HUD Style</span>
+                  <span class="toggle-desc">Display timeout banner &amp; live score header</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-comp-hudstyle" data-comp-cvar="amx_csgo_hud_style">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- LIVE TOURNAMENT HUD CARDS PREVIEW -->
+        <div class="hud-preview-dock">
+          <div class="hud-preview-header">
+            <div class="hud-title-left">
+              <span class="glyph glyph-tactical-reticle" style="color: var(--tactical-amber);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg></span>
+              <h3>Live Tournament HUD Cards Preview</h3>
+              <span class="hud-badge-sim">REAL-TIME CS2 OVERLAY SIMULATION</span>
+            </div>
+            <div style="font-size: 11px; font-family: var(--font-mono); color: var(--emerald-safe); display: flex; align-items: center; gap: 6px;">
+              <span class="brand-pip"></span>
+              <span>GOLDSRC HUD ENGINE ACTIVE</span>
+            </div>
+          </div>
+
+          <div class="hud-cards-viewport">
+            <!-- Damage Summary Simulation Card -->
+            <div class="hud-card-damage" id="preview-dmg-card">
+              <div>
+                <div class="damage-card-top">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="round-summary-label">ROUND 11 / 24 SUMMARY</span>
+                    <span style="color: var(--muted-slate);">&bull;</span>
+                    <span style="color: var(--muted-slate);">BOMB DEFUSED</span>
+                  </div>
+                  <span class="win-bonus-label">+ $3,500 CT WIN BONUS</span>
+                </div>
+
+                <div class="combatants-row">
+                  <!-- Local CT Player -->
+                  <div class="combatant-cell">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <div class="team-badge ct">CT</div>
+                      <div class="combatant-meta">
+                        <span class="player-name">s1mple (You)</span>
+                        <span class="player-status-safe">SURVIVED &bull; 84 HP</span>
+                      </div>
+                    </div>
+                    <div class="combatant-stats">
+                      <span class="stat-kills">2 KILLS</span>
+                      <div class="stat-dmg">248 DMG</div>
+                    </div>
+                  </div>
+
+                  <!-- Enemy Encounter -->
+                  <div class="combatant-cell">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <div class="team-badge t">T</div>
+                      <div class="combatant-meta">
+                        <span class="player-name">ZywOo</span>
+                        <span class="player-status-elim">ELIMINATED</span>
+                      </div>
+                    </div>
+                    <div class="combatant-stats">
+                      <span style="font-size: 12px; font-weight: 800; color: var(--cyber-cyan);">100 in 4</span>
+                      <div class="stat-dmg">REC: 42 IN 2</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ADR Bar -->
+              <div class="damage-bar-wrap">
+                <div class="damage-bar-labels">
+                  <span>TEAM DAMAGE SHARE: 68% CT CONTROL</span>
+                  <span style="color: var(--cyber-cyan);">ADR: 124.0</span>
+                </div>
+                <div class="damage-track">
+                  <div class="bar-ct"></div>
+                  <div class="bar-t"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- MVP Star Showcase Card -->
+            <div class="hud-card-mvp" id="preview-mvp-card">
+              <div class="mvp-header-line">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span class="glyph glyph-sm" style="color: var(--tactical-amber);"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9"/></svg></span>
+                  <span>MOST VALUABLE PLAYER</span>
+                </div>
+                <span style="font-size: 10px; color: var(--muted-slate);">ROUND 11</span>
+              </div>
+
+              <div class="mvp-player-spotlight">
+                <div class="mvp-avatar">S1</div>
+                <div class="mvp-accolade">
+                  <div class="mvp-name-row">
+                    <span class="mvp-name">s1mple</span>
+                    <span class="mvp-star-tag"><svg class="glyph-star" viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg> MVP</span>
+                  </div>
+                  <span class="mvp-desc">Defused the bomb and scored 2 key eliminations</span>
+                </div>
+              </div>
+
+              <div class="mvp-rating-strip">
+                <div style="display: flex; align-items: center; gap: 4px;">TOTAL STARS: <span style="color: var(--tactical-amber); display: inline-flex; align-items: center; gap: 2px;"><svg class="glyph-star" viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg><svg class="glyph-star" viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg><svg class="glyph-star" viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg></span></div>
+                <div style="width: 1px; height: 14px; background: var(--surface-container-highest);"></div>
+                <div>ROUND RATING: <span class="mvp-rating-val">2.14</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================= -->
+      <!-- TAB 3: BOTS & SAVAGE AI CENTER                                -->
+      <!-- ============================================================= -->
+      <section id="tab-bots-ecosystem" class="tab-pane">
+        <!-- Section Toolbar -->
+        <div class="section-toolbar">
+          <div class="toolbar-title-wrap">
+            <div class="title-with-accent">
+              <span class="accent-bar"></span>
+              <h2>Bots &amp; Savage AI Center</h2>
+            </div>
+            <p>YaPB server roster controls, 4-tier difficulty presets, and granular 4x4 AI behavioral matrix</p>
+          </div>
+          <button id="btn-save-bots" class="btn btn-primary" type="button">
+            <span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span>
+            <span>Save Bot Settings</span>
+          </button>
+        </div>
+
+        <!-- Master AI Engine Banner -->
+        <div class="master-hero-card">
+          <div class="master-hero-left">
+            <div class="hero-reactor-emblem" id="icon-ai-mode">
+              <span class="glyph glyph-xl glyph-cybernetic-cpu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12,2 21,7 21,17 12,22 3,17 3,7"/><rect class="cpu-core" x="9" y="9" width="6" height="6" rx="1" fill="currentColor"/></svg></span>
+            </div>
+            <div>
+              <h3>
+                <span id="txt-ai-mode-title">Savage Esports AI Engine</span>
+                <span id="badge-ai-mode" style="font-size: 10px; font-weight: 800; background: rgba(56, 189, 248, 0.2); color: var(--cyber-cyan); padding: 2px 6px; border-radius: 3px; letter-spacing: 0.06em;">SAVAGE AI</span>
+              </h3>
+              <p id="txt-ai-mode-desc">5-role meta, holding angles, weapon drops, and tactical radio/chat calls enabled.</p>
+            </div>
+          </div>
+          <label class="switch switch-lg">
+            <input type="checkbox" id="chk-master-savage-ai">
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+
+        <!-- 4-Tier Difficulty Preset Cards -->
+        <div class="ai-presets-grid">
+          <!-- Tier 1: Vanilla YaPB -->
+          <div class="preset-card" data-preset="vanilla">
+            <div>
+              <div class="preset-card-header">
+                <span class="preset-tier-badge tier-1">LEVEL 1</span>
+                <span class="glyph glyph-ballistic-shield" style="color: var(--emerald-safe);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2L3 6V12C3 17.5 6.8 22.3 12 24C17.2 22.3 21 17.5 21 12V6L12 2Z"/></svg></span>
+              </div>
+              <div class="preset-title">Vanilla YaPB</div>
+              <div class="preset-subtitle">Clean Native Bot Pathing</div>
+              <ul class="preset-features-list">
+                <li><span class="glyph glyph-sm" style="color: var(--emerald-safe);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span> Savage Bot Disabled</li>
+                <li><span class="glyph glyph-sm" style="color: var(--emerald-safe);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span> Standard YaPB Pathing</li>
+                <li><span class="glyph glyph-sm" style="color: var(--emerald-safe);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span> Casual Aim &amp; Reaction</li>
+                <li><span class="glyph glyph-sm" style="color: var(--emerald-safe);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span> Zero Wallbangs or ESP</li>
+              </ul>
+            </div>
+            <button class="btn btn-ghost btn-sm btn-apply-preset" data-target-preset="vanilla" type="button">Apply Vanilla</button>
+          </div>
+
+          <!-- Tier 2: Tactical Companion -->
+          <div class="preset-card" data-preset="tactical">
+            <div>
+              <div class="preset-card-header">
+                <span class="preset-tier-badge tier-2">LEVEL 2</span>
+                <span class="glyph glyph-tournament-aegis" style="color: var(--cyber-cyan);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2L4 5V11C4 16.5 7.4 21.6 12 23C16.6 21.6 20 16.5 20 11V5L12 2Z"/></svg></span>
+              </div>
+              <div class="preset-title">Tactical Companion</div>
+              <div class="preset-subtitle">Fair Play &amp; Teamwork</div>
+              <ul class="preset-features-list">
+                <li><span class="glyph glyph-sm" style="color: var(--cyber-cyan);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span> 5-Role Meta &amp; Site Holding</li>
+                <li><span class="glyph glyph-sm" style="color: var(--cyber-cyan);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span> Weapon Drops &amp; Calls</li>
+                <li><span class="glyph glyph-sm" style="color: var(--muted-slate);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span> Triggerbot &amp; ESP OFF</li>
+                <li><span class="glyph glyph-sm" style="color: var(--muted-slate);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span> Spray Recoil Cheats OFF</li>
+              </ul>
+            </div>
+            <button class="btn btn-ghost btn-sm btn-apply-preset" data-target-preset="tactical" type="button">Apply Tactical</button>
+          </div>
+
+          <!-- Tier 3: Competitive Ranked -->
+          <div class="preset-card" data-preset="competitive">
+            <div>
+              <div class="preset-card-header">
+                <span class="preset-tier-badge tier-3">LEVEL 3</span>
+                <span class="glyph glyph-tactical-reticle" style="color: var(--tactical-amber);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg></span>
+              </div>
+              <div class="preset-title">Competitive Ranked</div>
+              <div class="preset-subtitle">Humanized Esports Pro</div>
+              <ul class="preset-features-list">
+                <li><span class="glyph glyph-sm" style="color: var(--tactical-amber);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span> Counter-Strafe &amp; Jiggle Duel</li>
+                <li><span class="glyph glyph-sm" style="color: var(--tactical-amber);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span> Anti-Flash 180 Spin Reflex</li>
+                <li><span class="glyph glyph-sm" style="color: var(--tactical-amber);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span> Fake Defuse &amp; Sound Wallbang</li>
+                <li><span class="glyph glyph-sm" style="color: var(--muted-slate);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span> Zero-Latency Triggerbot OFF</li>
+              </ul>
+            </div>
+            <button class="btn btn-ghost btn-sm btn-apply-preset" data-target-preset="competitive" type="button">Apply Comp</button>
+          </div>
+
+          <!-- Tier 4: Savage Demon -->
+          <div class="preset-card" data-preset="demon">
+            <div>
+              <div class="preset-card-header">
+                <span class="preset-tier-badge tier-4">LEVEL 4 &bull; OP</span>
+                <span class="glyph glyph-predator-skull" style="color: var(--demon-crimson);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4C5 2.9 5.9 2 7 2H17C18.1 2 19 2.9 19 4V12C19 14.5 17.5 16.7 15.5 17.6V21C15.5 21.6 15 22 14.5 22H9.5C9 22 8.5 21.6 8.5 21V17.6C6.5 16.7 5 14.5 5 12V4Z"/><circle cx="9" cy="9" r="1.5" fill="currentColor"/><circle cx="15" cy="9" r="1.5" fill="currentColor"/></svg></span>
+              </div>
+              <div class="preset-title">Savage Demon</div>
+              <div class="preset-subtitle">Predator AI (All Maxed)</div>
+              <ul class="preset-features-list">
+                <li><span class="glyph glyph-sm" style="color: var(--demon-crimson);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span> 0ms Triggerbot on Crosshair</li>
+                <li><span class="glyph glyph-sm" style="color: var(--demon-crimson);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span> Spray Recoil Pull-Down</li>
+                <li><span class="glyph glyph-sm" style="color: var(--demon-crimson);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span> Footstep Wallbang ESP</li>
+                <li><span class="glyph glyph-sm" style="color: var(--demon-crimson);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span> Hivemind Radar Shared Intel</li>
+              </ul>
+            </div>
+            <button class="btn btn-danger-ghost btn-sm btn-apply-preset" data-target-preset="demon" type="button">Apply Demon</button>
+          </div>
+        </div>
+
+        <!-- YaPB Server Controls -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-left">
+              <span class="glyph glyph-interlocking-gears" style="color: var(--tactical-amber);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle class="gear-primary" cx="9" cy="9" r="4"/><circle class="gear-primary" cx="9" cy="9" r="1.5" fill="currentColor"/><circle class="gear-secondary" cx="16" cy="16" r="3.5"/></svg></span>
+              <div>
+                <h3>YaPB Server Controls &amp; Roster</h3>
+                <p>Configured non-destructively in <code>cstrike/addons/yapb/conf/yapb.cfg</code></p>
+              </div>
+            </div>
+            <span style="font-size: 10px; font-weight: 700; color: var(--muted-slate); text-transform: uppercase;">YAPB.CFG</span>
+          </div>
+          <div class="card-body form-stack">
+            <div class="slider-row">
+              <div class="slider-label-wrap">
+                <span>Bot Quota (Total Bot Count)</span>
+                <span class="slider-val" id="val-yb-quota">10</span>
+              </div>
+              <input type="range" class="range-slider" id="rng-yb-quota" min="0" max="31" value="10" data-yapb-cvar="yb_quota">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div class="form-stack">
+                <label style="font-size: 11px; font-weight: 700; color: var(--muted-slate); text-transform: uppercase;">Quota Mode</label>
+                <select id="sel-yb-quota-mode" class="comp-select" data-yapb-cvar="yb_quota_mode">
+                  <option value="fill">Fill (Fills server to quota)</option>
+                  <option value="match">Match (Balances teams)</option>
+                  <option value="normal">Normal (Fixed quota)</option>
+                </select>
+              </div>
+
+              <div class="form-stack">
+                <label style="font-size: 11px; font-weight: 700; color: var(--muted-slate); text-transform: uppercase;">Team Join</label>
+                <select id="sel-yb-join-team" class="comp-select" data-yapb-cvar="yb_join_team">
+                  <option value="any">Auto-Balance (Any Team)</option>
+                  <option value="ct">Terrorist Hunt (Bots CT Only)</option>
+                  <option value="t">Hostage Defense (Bots T Only)</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">Auto-Vacate Slots</span>
+                  <span class="toggle-desc">Bot kicks self when human player joins</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-yb-autovacate" data-yapb-cvar="yb_autovacate">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">Jason Mode (Knife Only)</span>
+                  <span class="toggle-desc">Bots use only combat knives</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-yb-jasonmode" data-yapb-cvar="yb_jasonmode">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 16-Parameter Granular AI Switch Matrix (4x4 Bento Grid) -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-left">
+              <span class="glyph glyph-cybernetic-cpu" style="color: var(--tactical-amber);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12,2 21,7 21,17 12,22 3,17 3,7"/><rect class="cpu-core" x="9" y="9" width="6" height="6" rx="1" fill="currentColor"/></svg></span>
+              <div>
+                <h3>16-Parameter Granular Savage AI Matrix</h3>
+                <p>Individual tactical switches in <code>cstrike/addons/amxmodx/configs/bot_savage_roles.cfg</code></p>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button class="btn btn-ghost btn-sm" id="btn-reset-balanced" type="button">Reset to Balanced</button>
+              <button class="btn btn-danger-ghost btn-sm" id="btn-sanitize-cheats" type="button">Sanitize Cheats</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="matrix-4x4">
+              <!-- ROW 1: Roles & Strategy -->
+              <div class="matrix-cell">
+                <div class="matrix-info">
+                  <span class="matrix-title">5-Role Meta System</span>
+                  <span class="matrix-desc">Entry, AWP, Support, Lurker, IGL</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-savage-roles" data-savage-cvar="bot_savage_roles">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <div class="matrix-cell">
+                <div class="matrix-info">
+                  <span class="matrix-title">Angle Holding</span>
+                  <span class="matrix-desc">Stationary head-level crosshair</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-savage-holding" data-savage-cvar="bot_savage_holding">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <div class="matrix-cell">
+                <div class="matrix-info">
+                  <span class="matrix-title">IGL Radio Calls</span>
+                  <span class="matrix-desc">Rush, default, split callouts</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-savage-calls" data-savage-cvar="bot_savage_calls">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <div class="matrix-cell">
+                <div class="matrix-info">
+                  <span class="matrix-title">Gun Drops on Demand</span>
+                  <span class="matrix-desc">Drop rifles on 'drop' command</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-savage-dropguns" data-savage-cvar="bot_savage_dropguns">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <!-- ROW 2: Movement & Reflexes -->
+              <div class="matrix-cell">
+                <div class="matrix-info">
+                  <span class="matrix-title">Counter-Strafe</span>
+                  <span class="matrix-desc">Instant 100% first-bullet stop</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-savage-counterstrafe" data-savage-cvar="bot_savage_counterstrafe">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <div class="matrix-cell">
+                <div class="matrix-info">
+                  <span class="matrix-title">Combat Jiggle</span>
+                  <span class="matrix-desc">AD-AD strafe micro-peeks</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-savage-jiggle" data-savage-cvar="bot_savage_jiggle">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <div class="matrix-cell">
+                <div class="matrix-info">
+                  <span class="matrix-title">Trade Frag Revenge</span>
+                  <span class="matrix-desc">Instant snap to fallen ally's killer</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-savage-tradefrag" data-savage-cvar="bot_savage_tradefrag">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <div class="matrix-cell">
+                <div class="matrix-info">
+                  <span class="matrix-title">Anti-Flash 180 Spin</span>
+                  <span class="matrix-desc">Turns back on incoming nade</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-savage-antiflash" data-savage-cvar="bot_savage_antiflash">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <!-- ROW 3: Mindgames & Teamplay -->
+              <div class="matrix-cell">
+                <div class="matrix-info">
+                  <span class="matrix-title">Fake Defuse Bait</span>
+                  <span class="matrix-desc">Taps bomb sound to lure retakers</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-savage-fakedefuse" data-savage-cvar="bot_savage_fakedefuse">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <div class="matrix-cell">
+                <div class="matrix-info">
+                  <span class="matrix-title">Jump Scout Quickzoom</span>
+                  <span class="matrix-desc">Apex airborne sniper accuracy</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-savage-jumpscout" data-savage-cvar="bot_savage_jumpscout">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <div class="matrix-cell">
+                <div class="matrix-info">
+                  <span class="matrix-title">Reload Duck &amp; Cover</span>
+                  <span class="matrix-desc">Retreats to cover on empty mag</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-savage-reloadcover" data-savage-cvar="bot_savage_reloadcover">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <div class="matrix-cell">
+                <div class="matrix-info">
+                  <span class="matrix-title">Chat Voice Calls</span>
+                  <span class="matrix-desc">Obeys 'care a', 'flash me', 'rotate'</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="chk-savage-chat-calls" data-savage-cvar="bot_savage_chat_calls">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <!-- ROW 4: Predator Demon Cheats [OP] -->
+              <div class="matrix-cell cheat-cell">
+                <div class="matrix-info">
+                  <span class="matrix-title" style="color: var(--demon-crimson);">
+                    <span>0ms Triggerbot</span>
+                    <span class="cheat-tag">OP CHEAT</span>
+                  </span>
+                  <span class="matrix-desc">Instant 0ms fire on crosshair contact</span>
+                </div>
+                <label class="switch switch-crimson">
+                  <input type="checkbox" class="chk-cheat-cvar" id="chk-savage-triggerbot" data-savage-cvar="bot_savage_triggerbot">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <div class="matrix-cell cheat-cell">
+                <div class="matrix-info">
+                  <span class="matrix-title" style="color: var(--demon-crimson);">
+                    <span>Recoil Pull Compensation</span>
+                    <span class="cheat-tag">OP CHEAT</span>
+                  </span>
+                  <span class="matrix-desc">Perfect laser spray pulldown</span>
+                </div>
+                <label class="switch switch-crimson">
+                  <input type="checkbox" class="chk-cheat-cvar" id="chk-savage-recoil" data-savage-cvar="bot_savage_recoil">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <div class="matrix-cell cheat-cell">
+                <div class="matrix-info">
+                  <span class="matrix-title" style="color: var(--demon-crimson);">
+                    <span>Footstep Sound ESP</span>
+                    <span class="cheat-tag">OP CHEAT</span>
+                  </span>
+                  <span class="matrix-desc">Wallbangs through surfaces on sound</span>
+                </div>
+                <label class="switch switch-crimson">
+                  <input type="checkbox" class="chk-cheat-cvar" id="chk-savage-wallbang" data-savage-cvar="bot_savage_wallbang">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <div class="matrix-cell cheat-cell">
+                <div class="matrix-info">
+                  <span class="matrix-title" style="color: var(--demon-crimson);">
+                    <span>Hivemind Radar Sharing</span>
+                    <span class="cheat-tag">OP CHEAT</span>
+                  </span>
+                  <span class="matrix-desc">Instant shared coordinate intel</span>
+                </div>
+                <label class="switch switch-crimson">
+                  <input type="checkbox" class="chk-cheat-cvar" id="chk-savage-hivemind" data-savage-cvar="bot_savage_hivemind">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================= -->
+      <!-- TAB 4: SAFETY & BACKUPS (SHA-256 INTEGRITY)                   -->
+      <!-- ============================================================= -->
+      <section id="tab-safety-center" class="tab-pane">
+        <!-- Section Toolbar -->
+        <div class="section-toolbar">
+          <div class="toolbar-title-wrap">
+            <div class="title-with-accent">
+              <span class="accent-bar"></span>
+              <h2>Safety Backups &amp; SHA-256 Integrity Pipeline</h2>
+            </div>
+            <p>Non-destructive GoldSrc model recovery vault with cryptographic checksum verification</p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button id="btn-verify-backups" class="btn btn-ghost" type="button">
+              <span class="glyph glyph-ballistic-shield"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2L3 6V12C3 17.5 6.8 22.3 12 24C17.2 22.3 21 17.5 21 12V6L12 2Z"/></svg></span>
+              <span>Verify Integrity</span>
+            </button>
+            <button id="btn-refresh-backups" class="btn btn-primary" type="button">
+              <span class="glyph glyph-orbital-cycle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2V8H15.5"/><path d="M2.5 22V16H8.5"/><path d="M20.49 15A9 9 0 0 1 5.64 5.64L2.5 8"/><path d="M3.51 9A9 9 0 0 1 18.36 18.36L21.5 16"/></svg></span>
+              <span>Refresh Vault</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3 Telemetry Metric Cards -->
+        <div class="backup-telemetry-row">
+          <div class="telemetry-card">
+            <div class="telemetry-card-top">
+              <span>Archived Candidates</span>
+              <span class="glyph glyph-sm glyph-ballistic-shield"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L3 6V12C3 17.5 6.8 22.3 12 24C17.2 22.3 21 17.5 21 12V6L12 2Z"/></svg></span>
+            </div>
+            <div class="telemetry-stat-big" id="telemetry-backup-count">0</div>
+            <div class="telemetry-subtext">Active <code>.bak</code> files discovered in directory</div>
+          </div>
+
+          <div class="telemetry-card">
+            <div class="telemetry-card-top">
+              <span>Vault Storage Footprint</span>
+              <span class="glyph glyph-sm glyph-folder-vault"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6C3 4.9 3.9 4 5 4H10L12 6H19C20.1 6 21 6.9 21 8V18C21 19.1 20.1 20 19 20H5C3.9 20 3 19.1 3 18V6Z"/></svg></span>
+            </div>
+            <div class="telemetry-stat-big" id="telemetry-backup-size">0.0 MB</div>
+            <div class="telemetry-subtext">Total volume on disk storage</div>
+          </div>
+
+          <div class="telemetry-card">
+            <div class="telemetry-card-top">
+              <span>Integrity Pipeline</span>
+              <span class="glyph glyph-sm glyph-core-reactor" style="color: var(--emerald-safe);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.5" fill="currentColor"/></svg></span>
+            </div>
+            <div class="telemetry-stat-big" style="color: var(--emerald-safe);" id="telemetry-backup-integrity">100% VALID</div>
+            <div class="telemetry-subtext" id="telemetry-backup-guard">Direct I/O Write Locks Guarded</div>
+          </div>
+        </div>
+
+        <!-- Archived File Manifest Table -->
+        <div class="card">
+          <div class="manifest-toolbar">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="glyph glyph-folder-vault" style="color: var(--tactical-amber);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6C3 4.9 3.9 4 5 4H10L12 6H19C20.1 6 21 6.9 21 8V18C21 19.1 20.1 20 19 20H5C3.9 20 3 19.1 3 18V6Z"/></svg></span>
+              <span style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">Archived File Manifest</span>
+            </div>
+            <div class="search-input-wrap">
+              <span class="search-icon glyph glyph-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16" y2="16"/></svg></span>
+              <input type="text" id="filter-backups" class="search-input" placeholder="Search model or weapon category...">
+            </div>
+          </div>
+
+          <div class="backups-table-wrap">
+            <table class="backups-table">
+              <thead>
+                <tr>
+                  <th>Model Name</th>
+                  <th>Category</th>
+                  <th>Backup Location Path</th>
+                  <th>Size</th>
+                  <th>Modified Date</th>
+                  <th>SHA-256 Checksum</th>
+                  <th style="text-align: right;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="backups-tbody">
+                <!-- Dynamically injected via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================= -->
+      <!-- TAB 5: SKIN STUDIO VIEWPORT (PORT 5160)                       -->
+      <!-- ============================================================= -->
+      <section id="tab-skin-studio-tab" class="tab-pane">
+        <div class="section-toolbar">
+          <div class="toolbar-title-wrap">
+            <div class="title-with-accent">
+              <span class="accent-bar"></span>
+              <h2>CS 1.6 Asset Studio (Integrated Viewport)</h2>
+            </div>
+            <p>WebGL 3D model viewer, sticker &amp; glove baking, StatTrak customizer, and color vibrance</p>
+          </div>
+          <button id="btn-launch-studio-tab" class="btn btn-primary" type="button">
+            <span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
+            <span>Launch Asset Studio</span>
+          </button>
+        </div>
+
+        <div class="card" style="margin-bottom: 0;">
+          <div class="card-header">
+            <div class="card-header-left">
+              <span class="studio-dot" id="suite-dot"></span>
+              <span id="suite-status-text" style="font-size: 11px; font-weight: 700; font-family: var(--font-mono);">CHECKING PORT 5160...</span>
+            </div>
+            <a href="http://127.0.0.1:5160/" target="_blank" class="btn btn-ghost btn-sm">Open in External Window</a>
+          </div>
+          <div style="width: 100%; height: 680px; background: var(--void-base); border-radius: 0 0 10px 10px; overflow: hidden;">
+            <iframe id="studio-iframe" src="about:blank" style="width: 100%; height: 100%; border: none;"></iframe>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================= -->
+      <!-- CONSOLE TELEMETRY DOCK (BOTTOM PERSISTENT DOCK)               -->
+      <!-- ============================================================= -->
+      <div class="console-telemetry-dock">
+        <div class="console-dock-header">
+          <div class="console-dock-title">
+            <span class="brand-pip"></span>
+            <span>MOD HUB CONSOLE TELEMETRY LOG</span>
+            <span style="color: var(--muted-slate); font-family: var(--font-mono); font-size: 10px;">[STDOUT / STDERR]</span>
+          </div>
+          <button id="btn-clear-console" class="btn btn-ghost btn-sm" type="button">Clear Log</button>
+        </div>
+        <div class="console-dock-body" id="console-output">
+          <!-- Live log lines injected here -->
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

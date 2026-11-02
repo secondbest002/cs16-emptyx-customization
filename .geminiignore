@@ -1,0 +1,13 @@
+# CS 1.6 EmptyX Customization - Gemini Exclusions
+# Keep repository strictly lean (<100MB) for Gemini AI scanner
+
+*.zip
+*.tar.gz
+*.orig.mdl
+*.bak
+.studio_backups/
+my_mods/exports/
+__pycache__/
+*.pyc
+.tmp/
+*.log

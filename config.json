@@ -1,0 +1,9 @@
+{
+  "game_directory": "D:\\Counter-Strike 1.6\\Counter-Strike 1.6 Original",
+  "active_team": "ct",
+  "workspace_version": "2.1.0",
+  "staging_dir": "./my_mods/staging",
+  "exports_dir": "./my_mods/exports",
+  "auto_backup": true,
+  "max_workspace_mb": 80
+}

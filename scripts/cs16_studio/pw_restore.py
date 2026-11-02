@@ -1,0 +1,286 @@
+"""
+pw_restore.py - Player (p_*.mdl) and World (w_*.mdl) model resolver,
+backup detector, and atomic restoration engine for CS 1.6 Asset Studio Pro.
+Integrated with EmptyX Customization config_manager.
+GoldSrc StudioModel (IDST v10) compatible.
+"""
+
+import os
+from pathlib import Path
+import shutil
+import struct
+from typing import Dict, List, Optional, Tuple, Union
+
+from .config_manager import config
+
+STUDIO_MAGIC = b"IDST"
+STUDIO_VERSION = 10
+
+
+def find_model_backup(model_path: Union[str, Path]) -> Tuple[Optional[Path], Optional[str]]:
+    """
+    Checks for available backup files for a model.
+    Returns (backup_path, backup_type) where backup_type is '.orig.mdl' or '.bak'.
+    """
+    p = Path(model_path).resolve()
+
+    orig = p.with_suffix(".orig.mdl")
+    if orig.is_file():
+        return orig, ".orig.mdl"
+
+    bak_full = Path(str(p) + ".bak")
+    if bak_full.is_file():
+        return bak_full, ".bak"
+
+    bak_suffix = p.with_suffix(".bak")
+    if bak_suffix.is_file():
+        return bak_suffix, ".bak"
+
+    return None, None
+
+
+def restore_single_model_file(model_path: Union[str, Path]) -> Tuple[bool, str, Optional[str]]:
+    """
+    Safely restores a single GoldSrc MDL file from its backup (.orig.mdl or .bak).
+    Performs IDST v10 validation before replacing the file atomically.
+    """
+    p = Path(model_path).resolve()
+    bak_path, bak_type = find_model_backup(p)
+    if not bak_path:
+        return False, f"No backup (.orig.mdl or .bak) found for '{p.name}'.", None
+
+    try:
+        with open(bak_path, "rb") as f:
+            data = f.read()
+    except Exception as e:
+        return False, f"Failed to read backup '{bak_path.name}': {e}", bak_type
+
+    if len(data) < 188:
+        return False, f"Backup file '{bak_path.name}' is too small ({len(data)} bytes).", bak_type
+
+    magic, ver = struct.unpack_from("<4sI", data, 0)
+    if magic != STUDIO_MAGIC or ver != STUDIO_VERSION:
+        return False, f"Corrupted backup '{bak_path.name}' (magic={magic}, ver={ver}, expected IDST v10).", bak_type
+
+    p.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = p.with_suffix(".tmp")
+    try:
+        with open(tmp_path, "wb") as f:
+            f.write(data)
+        os.replace(tmp_path, p)
+    except Exception as e:
+        if tmp_path.exists():
+            try:
+                tmp_path.unlink()
+            except OSError:
+                pass
+        return False, f"Failed to replace '{p.name}' with backup: {e}", bak_type
+
+    orig_path = p.with_suffix(".orig.mdl")
+    if bak_type == ".bak" and not orig_path.exists():
+        try:
+            shutil.copy2(bak_path, orig_path)
+        except OSError:
+            pass
+
+    return True, f"Successfully restored '{p.name}' from {bak_path.name}.", bak_type
+
+
+def resolve_weapon_triplet(
+    path_or_weapon: str,
+    team: str = "ct",
+    root_dir: Optional[Union[str, Path]] = None,
+) -> Dict[str, dict]:
+    """
+    Resolves viewmodel (v_*.mdl), player model (p_*.mdl), and world model (w_*.mdl)
+    for a given weapon or path. Defaults root_dir to config.get_game_root().
+    """
+    root = Path(root_dir).resolve() if root_dir else config.get_game_root()
+    candidate = Path(path_or_weapon)
+
+    base = candidate.name.lower()
+    if base.endswith(".bak"):
+        base = base[:-4]
+    if base.endswith(".orig.mdl"):
+        base = base[:-9]
+    elif base.endswith(".mdl"):
+        base = base[:-4]
+
+    for prefix in ("v_", "p_", "w_"):
+        if base.startswith(prefix):
+            base = base[len(prefix):]
+            break
+
+    weapon_key = base
+    team = team.lower()
+    other_team = "t" if team == "ct" else "ct"
+
+    alias_keys = [weapon_key]
+    if weapon_key == "elite":
+        alias_keys.append("elites")
+    elif weapon_key == "elites":
+        alias_keys.append("elite")
+
+    is_knife_variant = weapon_key.startswith("knife_")
+
+    triplet = {}
+    for role in ("v", "p", "w"):
+        filename = f"{role}_{weapon_key}.mdl"
+        role_label = (
+            "Viewmodel (First-Person)"
+            if role == "v"
+            else ("Player Model (Third-Person)" if role == "p" else "World Model (Dropped)")
+        )
+
+        found_path: Optional[Path] = None
+
+        if candidate.is_file():
+            if candidate.name.lower() == filename:
+                found_path = candidate.resolve()
+            elif (candidate.parent / filename).is_file():
+                found_path = (candidate.parent / filename).resolve()
+            elif is_knife_variant and (candidate.parent / f"{role}_knife.mdl").is_file():
+                found_path = (candidate.parent / f"{role}_knife.mdl").resolve()
+
+        if not found_path and candidate.is_dir():
+            for ak in alias_keys:
+                f_cand = candidate / f"{role}_{ak}.mdl"
+                if f_cand.is_file():
+                    found_path = f_cand.resolve()
+                    break
+
+        if not found_path:
+            for ak in alias_keys:
+                names_to_try = [f"{role}_{ak}.mdl"]
+                if is_knife_variant:
+                    names_to_try.append(f"{role}_knife.mdl")
+
+                for nm in names_to_try:
+                    search_paths = [
+                        root / "cstrike" / "models" / "custom_skins" / team / nm,
+                        root / "cstrike" / "models" / "custom_skins" / other_team / nm,
+                        root / "cstrike" / "models" / "csgo_skins" / team / nm,
+                        root / "cstrike" / "models" / "csgo_skins" / other_team / nm,
+                        root / "cstrike_hd" / "models" / nm,
+                        root / "cstrike" / "models" / nm,
+                    ]
+                    for sp in search_paths:
+                        if sp.is_file():
+                            found_path = sp.resolve()
+                            break
+                    if found_path:
+                        break
+                if found_path:
+                    break
+
+        if not found_path:
+            for search_root_dir in (root / "cstrike" / "models", root / "cstrike_hd" / "models"):
+                if search_root_dir.is_dir():
+                    for ak in alias_keys:
+                        names_to_try = [f"{role}_{ak}.mdl"]
+                        if is_knife_variant:
+                            names_to_try.append(f"{role}_knife.mdl")
+                        for nm in names_to_try:
+                            for f in search_root_dir.rglob("*.mdl"):
+                                if f.name.lower() == nm and not f.name.endswith(".orig.mdl") and not f.name.endswith(".bak"):
+                                    found_path = f.resolve()
+                                    break
+                            if found_path:
+                                break
+                        if found_path:
+                            break
+                if found_path:
+                    break
+
+        backup_path, backup_type = (find_model_backup(found_path) if found_path else (None, None))
+
+        triplet[role] = {
+            "role": role,
+            "role_label": role_label,
+            "filename": filename,
+            "path": str(found_path) if found_path else None,
+            "exists": found_path is not None and found_path.is_file(),
+            "has_backup": backup_path is not None,
+            "backup_path": str(backup_path) if backup_path else None,
+            "backup_type": backup_type,
+        }
+
+    return triplet
+
+
+def restore_weapon_models(
+    path_or_weapon: str,
+    team: str = "ct",
+    scope: str = "all",
+    root_dir: Optional[Union[str, Path]] = None,
+) -> dict:
+    """
+    Restores weapon models according to scope:
+      - 'all' or 'v_p_w': restores v, p, and w models
+      - 'pw' or 'pw_only': restores p and w models
+      - 'v' or 'v_only': restores v model only
+      - 'p' or 'p_only': restores p model only
+      - 'w' or 'w_only': restores w model only
+    Defaults root_dir to config.get_game_root().
+    """
+    scope_clean = str(scope).lower().strip()
+    if scope_clean in ("all", "v_p_w", "everything"):
+        target_roles = ["v", "p", "w"]
+    elif scope_clean in ("pw", "pw_only", "p_w", "thirdperson"):
+        target_roles = ["p", "w"]
+    elif scope_clean in ("v", "v_only", "viewmodel"):
+        target_roles = ["v"]
+    elif scope_clean in ("p", "p_only", "player"):
+        target_roles = ["p"]
+    elif scope_clean in ("w", "w_only", "world"):
+        target_roles = ["w"]
+    else:
+        raise ValueError(f"Unknown restore scope '{scope}'. Valid options: 'all', 'pw', 'v', 'p', 'w'.")
+
+    triplet = resolve_weapon_triplet(path_or_weapon, team=team, root_dir=root_dir)
+
+    results = {
+        "weapon": path_or_weapon,
+        "team": team,
+        "scope": scope_clean,
+        "target_roles": target_roles,
+        "restored_count": 0,
+        "failed_count": 0,
+        "models": {},
+        "success": False,
+    }
+
+    for role in target_roles:
+        info = triplet.get(role, {})
+        m_path_str = info.get("path")
+        res_entry = {
+            "role": role,
+            "role_label": info.get("role_label", role),
+            "filename": info.get("filename"),
+            "path": m_path_str,
+            "exists": info.get("exists", False),
+            "restored": False,
+            "backup_type": info.get("backup_type"),
+            "message": "",
+        }
+
+        if not info.get("exists") or not m_path_str:
+            res_entry["message"] = f"Model {info.get('filename')} does not exist on disk."
+            results["failed_count"] += 1
+        elif not info.get("has_backup"):
+            res_entry["message"] = f"No backup (.orig.mdl or .bak) found for {Path(m_path_str).name}."
+            results["failed_count"] += 1
+        else:
+            ok, msg, b_type = restore_single_model_file(m_path_str)
+            res_entry["restored"] = ok
+            res_entry["message"] = msg
+            res_entry["backup_type"] = b_type
+            if ok:
+                results["restored_count"] += 1
+            else:
+                results["failed_count"] += 1
+
+        results["models"][role] = res_entry
+
+    results["success"] = results["restored_count"] > 0
+    return results
