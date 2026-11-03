@@ -11,6 +11,7 @@ import json
 import math
 import os
 from pathlib import Path
+import shutil
 import sys
 from typing import Optional, Union
 import urllib.parse

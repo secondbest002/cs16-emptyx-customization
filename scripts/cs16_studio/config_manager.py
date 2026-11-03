@@ -18,6 +18,12 @@ class StudioConfig:
 
     _instance = None
 
+    @classmethod
+    def get_instance(cls) -> "StudioConfig":
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
     def __init__(self):
         self.studio_root = STUDIO_ROOT
         self.config_data: Dict[str, Union[str, bool, int]] = {}
