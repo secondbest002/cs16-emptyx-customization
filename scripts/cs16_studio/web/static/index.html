@@ -1,0 +1,2462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CS 1.6 Asset Studio Pro - Next-Gen Skin, Sticker & 3D Studio</title>
+  <link rel="stylesheet" href="theme_titanium.css">
+  <link rel="stylesheet" href="style.css">
+  <!-- Three.js and OrbitControls for 360° 3D WebGL Viewport with CDN Fallback -->
+  <script src="three.min.js"></script>
+  <script>
+    if (typeof THREE === "undefined") {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
+    }
+  </script>
+  <script src="OrbitControls.js"></script>
+  <script>
+    if (typeof THREE !== "undefined" && typeof THREE.OrbitControls === "undefined") {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"><\/script>');
+    }
+  </script>
+</head>
+<body>
+  <!-- Centralized Vector SVG Glyph Sprite (Zero Emojis System) -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+    <symbol id="glyph-cs" viewBox="0 0 24 24">
+      <rect x="2" y="3" width="20" height="18" rx="4" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M9 9h-2a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2M15 9h2a2 2 0 0 1 0 4h-2a2 2 0 0 0 0 4h2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="glyph-more-vertical" viewBox="0 0 24 24">
+      <circle cx="12" cy="5" r="1.75" fill="currentColor"/>
+      <circle cx="12" cy="12" r="1.75" fill="currentColor"/>
+      <circle cx="12" cy="19" r="1.75" fill="currentColor"/>
+    </symbol>
+    <symbol id="glyph-search" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/>
+      <line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="glyph-undo" viewBox="0 0 24 24">
+      <path d="M3 7v6h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-redo" viewBox="0 0 24 24">
+      <path d="M21 7v6h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-save" viewBox="0 0 24 24">
+      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="17 21 17 13 7 13 7 21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="7 3 7 8 15 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-bolt" viewBox="0 0 24 24">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-box" viewBox="0 0 24 24">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="3.27 6.96 12 12.01 20.73 6.96" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="12" y1="22.08" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-export" viewBox="0 0 24 24">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="7 10 12 15 17 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-restore" viewBox="0 0 24 24">
+      <path d="M21.5 2v6h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-chevron-down" viewBox="0 0 24 24">
+      <polyline points="6 9 12 15 18 9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-shield" viewBox="0 0 24 24">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="9 12 11 14 15 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-alert" viewBox="0 0 24 24">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="12" y1="9" x2="12" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="glyph-sparkle" viewBox="0 0 24 24">
+      <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-folder" viewBox="0 0 24 24">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-image" viewBox="0 0 24 24">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/>
+      <circle cx="8.5" cy="8.5" r="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
+      <polyline points="21 15 16 10 5 21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-sun" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="glyph-drop" viewBox="0 0 24 24">
+      <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-gem" viewBox="0 0 24 24">
+      <path d="M6 3h12l4 6-10 12L2 9z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M11 3L8 9l4 12 4-12-3-6M2 9h20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-palette" viewBox="0 0 24 24">
+      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.65-.75 1.65-1.69 0-.44-.18-.84-.44-1.13-.29-.29-.44-.65-.44-1.13 0-.92.75-1.66 1.67-1.66h2c3.05 0 5.56-2.52 5.56-5.57C22 6.5 17.5 2 12 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="7.5" cy="11.5" r="1.5" fill="currentColor"/>
+      <circle cx="12" cy="7.5" r="1.5" fill="currentColor"/>
+      <circle cx="16.5" cy="11.5" r="1.5" fill="currentColor"/>
+    </symbol>
+    <symbol id="glyph-eyedropper" viewBox="0 0 24 24">
+      <path d="m2 22 5-5M19 8a3 3 0 0 0-4-4l-9 9 4 4 9-9z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="m14 7 3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="glyph-weapon" viewBox="0 0 24 24">
+      <path d="M3 9h11l2 2h5v4h-3l-2 5h-4l1-5H8l-3-4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-rifle" viewBox="0 0 24 24">
+      <path d="M2 11h13l3 2h5v3h-4l-2 5h-3l1-5H10l-4-3H2v-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-smg" viewBox="0 0 24 24">
+      <path d="M4 10h10l2 2h4v3h-3l-1 4h-3l1-4H8l-2-3H4v-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-heavy" viewBox="0 0 24 24">
+      <path d="M2 10h15l3 2h3v4h-4l-2 4h-4l1-4H9l-3-4H2v-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-gear-knife" viewBox="0 0 24 24">
+      <path d="M3 21l8-8M12 5l7-3 2 2-3 7-5 2-3-3 2-5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-glove" viewBox="0 0 24 24">
+      <path d="M6 14v4a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-4M6 14a3 3 0 0 1-3-3V7a2 2 0 0 1 4 0v4m-1 3h4m0 0V5a2 2 0 0 1 4 0v6m0-6a2 2 0 0 1 4 0v6m0-5a2 2 0 0 1 4 0v9a6 6 0 0 1-6 6H8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-target" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+      <circle cx="12" cy="12" r="6" fill="none" stroke="currentColor" stroke-width="2"/>
+      <circle cx="12" cy="12" r="2" fill="none" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <symbol id="glyph-eye" viewBox="0 0 24 24">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <symbol id="glyph-camera" viewBox="0 0 24 24">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="12" cy="13" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <symbol id="glyph-video" viewBox="0 0 24 24">
+      <polygon points="23 7 16 12 23 17 23 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="1" y="5" width="15" height="14" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <symbol id="glyph-rotate" viewBox="0 0 24 24">
+      <path d="M21.5 2v6h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-wireframe" viewBox="0 0 24 24">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="3.27" y1="6.96" x2="12" y2="12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="12" y1="12.01" x2="20.73" y2="6.96" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="12" y1="22.08" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-focus" viewBox="0 0 24 24">
+      <path d="M4 8V4h4m8 0h4v4m0 8v4h-4m-8 0H4v-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="12" cy="12" r="2" fill="currentColor"/>
+    </symbol>
+    <symbol id="glyph-pin" viewBox="0 0 24 24">
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="12" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <symbol id="glyph-mouse" viewBox="0 0 24 24">
+      <rect x="6" y="3" width="12" height="18" rx="6" fill="none" stroke="currentColor" stroke-width="2"/>
+      <line x1="12" y1="7" x2="12" y2="11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="glyph-scroll" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M12 8v8m-3-5l3-3 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-tune" viewBox="0 0 24 24">
+      <line x1="4" y1="21" x2="4" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="4" y1="10" x2="4" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="12" y1="21" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="12" y1="8" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="20" y1="21" x2="20" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="20" y1="12" x2="20" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="1" y1="14" x2="7" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="9" y1="8" x2="15" y2="8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="17" y1="16" x2="23" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="glyph-mirror" viewBox="0 0 24 24">
+      <line x1="12" y1="3" x2="12" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M8 8L4 12l4 4M16 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-settings" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-split" viewBox="0 0 24 24">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/>
+      <line x1="12" y1="3" x2="12" y2="21" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <symbol id="glyph-check-circle" viewBox="0 0 24 24">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="22 4 12 14.01 9 11.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-sidebar" viewBox="0 0 24 24">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/>
+      <line x1="9" y1="3" x2="9" y2="21" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <symbol id="glyph-cube" viewBox="0 0 24 24">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="3.27 6.96 12 12.01 20.73 6.96" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="12" y1="22.08" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-canvas" viewBox="0 0 24 24">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/>
+      <line x1="3" y1="9" x2="21" y2="9" stroke="currentColor" stroke-width="2"/>
+      <line x1="3" y1="15" x2="21" y2="15" stroke="currentColor" stroke-width="2"/>
+      <line x1="9" y1="3" x2="9" y2="21" stroke="currentColor" stroke-width="2"/>
+      <line x1="15" y1="3" x2="15" y2="21" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <symbol id="glyph-chevron-down" viewBox="0 0 24 24">
+      <polyline points="6 9 12 15 18 9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-sidebar-right" viewBox="0 0 24 24">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/>
+      <line x1="15" y1="3" x2="15" y2="21" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <symbol id="glyph-zen" viewBox="0 0 24 24">
+      <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-trash" viewBox="0 0 24 24">
+      <polyline points="3 6 5 6 21 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-sync" viewBox="0 0 24 24">
+      <path d="M21.5 2v6h-6M2.5 22v-6h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19M2.66 8.43a10 10 0 0 1 .57 8.38l-5.67 5.19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-volume" viewBox="0 0 24 24">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-check" viewBox="0 0 24 24">
+      <polyline points="20 6 9 17 4 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-x" viewBox="0 0 24 24">
+      <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="glyph-flame" viewBox="0 0 24 24">
+      <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-upload" viewBox="0 0 24 24">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-layers" viewBox="0 0 24 24">
+      <polygon points="12 2 2 7 12 12 22 7 12 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="2 17 12 22 22 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="2 12 12 17 22 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-arrow-left" viewBox="0 0 24 24">
+      <polyline points="15 18 9 12 15 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-arrow-right" viewBox="0 0 24 24">
+      <polyline points="9 18 15 12 9 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-arrow-up" viewBox="0 0 24 24">
+      <polyline points="18 15 12 9 6 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-arrow-down" viewBox="0 0 24 24">
+      <polyline points="6 9 12 15 18 9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+  </svg>
+
+  <!-- Next-Gen Studio Workspace Container -->
+  <div class="app-container studio-workspace-container">
+    <!-- Top Streamlined Master Command Bar (Single-Tier Titanium) -->
+    <header class="studio-topbar-header" id="studioTopbar">
+      <div class="studio-primary-bar">
+        <!-- LEFT: Brand & Active Weapon Context Pod -->
+        <div class="topbar-left-cluster">
+          <div class="brand-unit">
+            <div class="brand-mark">CS</div>
+            <div class="brand-text">
+              <span class="brand-title">Asset Studio <span class="badge-pro">Pro</span></span>
+              <span class="brand-sub">GoldSrc IDST v10</span>
+            </div>
+          </div>
+
+          <!-- Team Arsenal Switcher (CT / T) -->
+          <div class="team-toggle-group team-toggle" id="teamToggle" title="Toggle Team Arsenal (CT / T)">
+            <button type="button" class="team-btn active active-ct" data-team="ct" title="Counter-Terrorists Loadout">CT</button>
+            <button type="button" class="team-btn" data-team="t" title="Terrorists Loadout">T</button>
+          </div>
+
+          <!-- Hidden / Fallback Selects & Spans for JS compatibility -->
+          <span class="model-name" id="modelName" style="display: none;">v_usp.mdl</span>
+          <span class="model-path" id="modelPath" style="display: none;">cstrike/models/custom_skins/ct/v_usp.mdl</span>
+          <select id="weaponSelect" class="styled-select hidden" title="Active Weapon">
+            <option value="">Loading weapons...</option>
+          </select>
+          <select id="profileSelect" class="styled-select hidden" title="Loadout Profiles">
+            <option value="">Load Profile...</option>
+          </select>
+          <span id="modelHealthBadge" style="display: none;"></span>
+        </div>
+
+        <!-- CENTER: Spotlight Search / Command Palette Bar -->
+        <div class="spotlight-search-wrap">
+          <button type="button" id="quickSearchBtn" class="spotlight-search search-command-btn" title="Quick Weapon Switcher & Command Palette (Ctrl+K or /)">
+            <div class="search-content">
+              <svg class="glyph glyph-sm"><use href="#glyph-search"></use></svg>
+              <span class="search-placeholder">Quick switch weapon, skin, or run command...</span>
+            </div>
+            <kbd class="kbd-tag kbd-hint">Ctrl+K</kbd>
+          </button>
+        </div>
+
+        <!-- RIGHT: Action Hub & Primary Production CTAs -->
+        <div class="topbar-right-cluster">
+          <!-- Breathable Equip In-Game CTA -->
+          <button type="button" id="equipInGameBtn" class="topbar-action-btn btn-equip-compact" title="Equip this weapon variant in active in-game loadout">
+            <svg class="glyph glyph-xs text-cyan"><use href="#glyph-check"></use></svg>
+            <span id="equipInGameLabel">Equip</span>
+          </button>
+
+          <!-- Breathable Export Modpack CTA -->
+          <button type="button" id="exportModpackBtn" class="topbar-action-btn btn-export-compact" title="Export ready-to-use CS 1.6 Mod Pack (.zip)">
+            <svg class="glyph glyph-xs text-amber"><use href="#glyph-export"></use></svg>
+            <span>Export</span>
+          </button>
+
+          <!-- Collapsible 3-Dots Overflow Menu -->
+          <div class="topbar-menu-wrapper" id="topbarMenuWrapper">
+            <button type="button" id="topbarMoreBtn" class="topbar-icon-btn" aria-haspopup="true" aria-expanded="false" title="More Operations">
+              <svg class="glyph glyph-sm"><use href="#glyph-more-vertical"></use></svg>
+            </button>
+            <div class="topbar-dropdown-menu hidden" id="topbarMoreMenu">
+              <div class="menu-group-header">HISTORY</div>
+              <button type="button" id="undoBtn" class="menu-item-btn" title="Undo last modification (Ctrl+Z)" disabled>
+                <svg class="glyph glyph-xs"><use href="#glyph-undo"></use></svg>
+                <span>Undo</span>
+                <kbd class="menu-kbd">Ctrl+Z</kbd>
+              </button>
+              <button type="button" id="redoBtn" class="menu-item-btn" title="Redo modification (Ctrl+Y)" disabled>
+                <svg class="glyph glyph-xs"><use href="#glyph-redo"></use></svg>
+                <span>Redo</span>
+                <kbd class="menu-kbd">Ctrl+Y</kbd>
+              </button>
+
+              <div class="menu-divider"></div>
+              <div class="menu-group-header">WEAPON & WORKSPACE</div>
+              <button type="button" id="syncPwTopbarBtn" class="menu-item-btn" title="Bake & Sync weapon textures to Player (p_*.mdl) and World (w_*.mdl) models">
+                <svg class="glyph glyph-xs text-cyan"><use href="#glyph-sync"></use></svg>
+                <span>Sync P/W Models</span>
+              </button>
+              <button type="button" id="saveProfileBtn" class="menu-item-btn" title="Save current loadout state as a profile snapshot">
+                <svg class="glyph glyph-xs text-amber"><use href="#glyph-save"></use></svg>
+                <span>Save Profile Snapshot</span>
+              </button>
+
+              <div class="menu-divider"></div>
+              <button type="button" id="restoreBtn" class="menu-item-btn danger-item" title="Restore model from .orig.mdl backup">
+                <svg class="glyph glyph-xs text-crimson"><use href="#glyph-restore"></use></svg>
+                <span>Restore Original (.orig.mdl)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Hidden elements to preserve JS compatibility -->
+          <span id="telemetryBreadcrumb" style="display: none;"></span>
+          <button id="toggleDockBtn" style="display: none;"></button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Studio Main Body (Center Hero Stage + Right Inspector Dock) -->
+    <div class="studio-body" id="studioBody">
+      <!-- Center Hero Stage & Bottom Utility Shelf -->
+
+      <!-- 3. Center Hero Viewport Stage -->
+      <main class="studio-hero-stage">
+        <!-- Loading Indicator -->
+        <div id="loader" class="loader-overlay hidden">
+          <div class="spinner"></div>
+          <p id="loaderText">Processing...</p>
+        </div>
+
+        <!-- Stage Control Bar (Top) -->
+        <div class="stage-control-bar">
+          <!-- View Mode Switcher: 3D Viewport / 2D Precision Canvas / Split View / Zen View -->
+          <div class="stage-mode-switcher">
+            <button type="button" class="stage-mode-btn active" id="stageMode3DBtn" title="Full 3D WebGL Model Viewport">
+              <svg class="glyph glyph-xs"><use href="#glyph-cube"></use></svg>
+              <span>3D Viewport</span>
+            </button>
+            <button type="button" class="stage-mode-btn" id="stageMode2DBtn" title="2D Precision Texture & Bake Canvas">
+              <svg class="glyph glyph-xs"><use href="#glyph-canvas"></use></svg>
+              <span>2D Precision</span>
+            </button>
+            <button type="button" class="stage-mode-btn" id="stageModeSplitBtn" title="Split Screen: 3D Model & 2D Canvas side-by-side">
+              <svg class="glyph glyph-xs"><use href="#glyph-split"></use></svg>
+              <span>Split View</span>
+            </button>
+            <button type="button" class="stage-mode-btn" id="stageZenBtn" title="Zen View: Fullscreen 3D Viewport Focus (F11)">
+              <svg class="glyph glyph-xs"><use href="#glyph-zen"></use></svg>
+              <span>Zen View</span>
+            </button>
+          </div>
+
+          <!-- Model Stats Breadcrumb -->
+          <div class="stage-stats-breadcrumb">
+            <span class="stat-badge" id="textureCount">10 Textures</span>
+            <span class="stat-badge" id="stickerCount">4 Sticker Slots</span>
+            <span class="stat-badge" id="backupStatus">Backup Active</span>
+          </div>
+        </div>
+
+        <!-- Stage Viewport Container Area -->
+        <div class="stage-viewport-area" id="stageViewportArea">
+          <!-- 3D WebGL Canvas Stage -->
+          <div id="viewport3dCanvasContainer" class="viewport3d-container">
+            <!-- 3D Perspective Grid Floor -->
+            <div class="perspective-grid-floor"></div>
+
+            <div id="v3dPlaceholder" class="v3d-placeholder">
+              <div class="spinner"></div>
+              <p>Loading 3D StudioModel Geometry...</p>
+            </div>
+
+            <!-- Floating 3D Slot Repositioning Banner -->
+            <div id="v3dRepositionBanner" class="v3d-reposition-banner hidden">
+              <span class="reposition-info">
+                <svg class="glyph glyph-sm text-cyan"><use href="#glyph-pin"></use></svg>
+                <strong>Target-Pick Mode:</strong> Click any weapon surface to reposition <strong id="v3dRepositionSlotName">Slot</strong>
+              </span>
+              <button type="button" id="v3dRepositionCancelBtn" class="btn btn-xs btn-secondary" title="Cancel repositioning (Esc)">Cancel (Esc)</button>
+            </div>
+
+            <!-- Sliding First-Person POV Drawer -->
+            <div id="v3dPovDrawer" class="v3d-pov-drawer hidden">
+              <div class="pov-drawer-header">
+                <div class="pov-drawer-title-wrap">
+                  <svg class="glyph glyph-sm text-cyan"><use href="#glyph-eye"></use></svg>
+                  <span class="pov-drawer-title">First-Person POV Stance</span>
+                </div>
+                <button type="button" id="v3dPovDrawerCloseBtn" class="pov-close-btn" title="Close POV Drawer">
+                  <svg class="glyph glyph-xs"><use href="#glyph-x"></use></svg>
+                </button>
+              </div>
+              <div class="pov-drawer-body">
+                <div class="pov-section-label">Stance Presets</div>
+                <div class="pov-preset-chips" id="povPresetChips">
+                  <button type="button" class="pov-chip active" data-preset="cs2_classic">CS2 Classic</button>
+                  <button type="button" class="pov-chip" data-preset="csgo_desktop">CS:GO Desktop</button>
+                  <button type="button" class="pov-chip" data-preset="couch">Couch View</button>
+                  <button type="button" class="pov-chip" data-preset="quake_centered">Quake Centered</button>
+                  <button type="button" class="pov-chip" data-preset="vanilla_16">Vanilla 1.6</button>
+                </div>
+
+                <div id="povDualElitesNotice" class="pov-notice hidden">
+                  <svg class="glyph glyph-xs text-amber"><use href="#glyph-tune"></use></svg>
+                  <span>Dual Elites locked: Offset X forced to 0.0 to keep both pistols centered.</span>
+                </div>
+
+                <div class="pov-sliders">
+                  <div class="pov-slider-group">
+                    <div class="pov-slider-label">
+                      <span>Offset X (Lateral)</span>
+                      <span class="pov-val" id="povValX">0.0</span>
+                    </div>
+                    <input type="range" id="povSliderX" min="-2.5" max="2.5" step="0.1" value="0.0" class="styled-slider">
+                  </div>
+                  <div class="pov-slider-group">
+                    <div class="pov-slider-label">
+                      <span>Offset Y (Depth / Forward)</span>
+                      <span class="pov-val" id="povValY">0.0</span>
+                    </div>
+                    <input type="range" id="povSliderY" min="-2.0" max="2.0" step="0.1" value="0.0" class="styled-slider">
+                  </div>
+                  <div class="pov-slider-group">
+                    <div class="pov-slider-label">
+                      <span>Offset Z (Vertical)</span>
+                      <span class="pov-val" id="povValZ">0.0</span>
+                    </div>
+                    <input type="range" id="povSliderZ" min="-2.0" max="2.0" step="0.1" value="0.0" class="styled-slider">
+                  </div>
+                  <div class="pov-slider-group">
+                    <div class="pov-slider-label">
+                      <span>Breathing Idle Sway</span>
+                      <span class="pov-val" id="povValSway">1.0</span>
+                    </div>
+                    <input type="range" id="povSliderSway" min="0.0" max="2.0" step="0.1" value="1.0" class="styled-slider">
+                  </div>
+                </div>
+
+                <div class="pov-actions">
+                  <button type="button" id="povApplyGameBtn" class="btn btn-sm btn-primary">
+                    <svg class="glyph glyph-xs"><use href="#glyph-check"></use></svg>
+                    <span>Apply to Game</span>
+                  </button>
+                  <button type="button" id="povResetBtn" class="btn btn-sm btn-secondary">
+                    <svg class="glyph glyph-xs"><use href="#glyph-restore"></use></svg>
+                    <span>Reset Vanilla</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Segmented Floating Glass Capsule HUD (Modern Titanium Style) -->
+            <div class="floating-hud-capsule" id="floatingHudCapsule">
+              <div class="hud-glass-dock" id="hudButtonsWrap">
+                <!-- CLUSTER A: CAMERA & VIEW STANCE -->
+                <div class="hud-cluster" data-cluster="camera">
+                  <button type="button" class="hud-pill-btn" id="v3dShowcaseBtn" title="Smooth 360° Showcase Presentation Orbit">
+                    <svg class="glyph glyph-xs"><use href="#glyph-video"></use></svg>
+                    <span>360°</span>
+                  </button>
+                  <button type="button" class="hud-pill-btn" id="v3dFpvBtn" title="Simulate CS 1.6 Player First-Person Eye View">
+                    <svg class="glyph glyph-xs"><use href="#glyph-eye"></use></svg>
+                    <span>FPV</span>
+                  </button>
+                  <button type="button" class="hud-pill-btn glow-cyan" id="v3dPovSettingsBtn" title="First-Person POV & Viewmodel Stance Settings">
+                    <span class="pulse-dot-cyan"></span>
+                    <span>POV</span>
+                  </button>
+                  <button type="button" class="hud-pill-btn icon-only" id="v3dAutoRotateBtn" title="Toggle automatic turntable rotation">
+                    <svg class="glyph glyph-xs"><use href="#glyph-rotate"></use></svg>
+                  </button>
+                  <button type="button" class="hud-pill-btn icon-only" id="v3dFocusWeaponBtn" title="Auto-focus camera directly on weapon mesh">
+                    <svg class="glyph glyph-xs"><use href="#glyph-focus"></use></svg>
+                  </button>
+                  <button type="button" class="hud-pill-btn icon-only" id="v3dResetCamBtn" title="Reset camera view">
+                    <svg class="glyph glyph-xs"><use href="#glyph-restore"></use></svg>
+                  </button>
+                </div>
+
+                <div class="hud-divider"></div>
+
+                <!-- CLUSTER B: MESH & STUDIO OVERLAYS -->
+                <div class="hud-cluster" data-cluster="overlays">
+                  <button type="button" class="hud-pill-btn icon-only" id="v3dChromeShineBtn" title="Toggle metallic chrome reflection on all parts">
+                    <svg class="glyph glyph-xs text-cyan"><use href="#glyph-sparkle"></use></svg>
+                  </button>
+                  <button type="button" class="hud-pill-btn icon-only" id="v3dHighlightStickersBtn" title="Highlight sticker slots and decals with accent neon glow">
+                    <svg class="glyph glyph-xs text-emerald"><use href="#glyph-target"></use></svg>
+                  </button>
+                  <button type="button" class="hud-pill-btn icon-only" id="v3dWeaponOnlyBtn" title="Hide hands and arms to inspect weapon only">
+                    <svg class="glyph glyph-xs"><use href="#glyph-weapon"></use></svg>
+                  </button>
+                  <button type="button" class="hud-pill-btn icon-only" id="v3dGlovesBtn" title="Toggle visibility of gloves and sleeves">
+                    <svg class="glyph glyph-xs"><use href="#glyph-glove"></use></svg>
+                  </button>
+                  <button type="button" class="hud-pill-btn icon-only" id="v3dWireframeBtn" title="Toggle wireframe mesh overlay">
+                    <svg class="glyph glyph-xs"><use href="#glyph-wireframe"></use></svg>
+                  </button>
+                </div>
+
+                <div class="hud-divider"></div>
+
+                <!-- CLUSTER C: OUTPUT & MINIMIZE -->
+                <div class="hud-cluster" data-cluster="actions">
+                  <button type="button" class="hud-pill-btn glow-amber" id="v3dSnapshotBtn" title="Capture and download 4K Transparent PNG Studio Snapshot">
+                    <svg class="glyph glyph-xs"><use href="#glyph-camera"></use></svg>
+                    <span>4K Snap</span>
+                  </button>
+                  <button type="button" class="hud-pill-btn icon-only" id="v3dReloadBtn" title="Hot-Reload 3D model geometry">
+                    <svg class="glyph glyph-xs"><use href="#glyph-restore"></use></svg>
+                  </button>
+                  <button type="button" class="hud-pill-btn hud-toggle-btn" id="hudCollapseToggleBtn" title="Minimize / Expand Controls (H)">
+                    <svg class="glyph glyph-xs hud-collapse-icon"><use href="#glyph-chevron-down"></use></svg>
+                    <span class="hud-toggle-label">HUD</span>
+                    <kbd class="kbd-hint">H</kbd>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2D Precision Canvas & Comparison Stage -->
+          <div id="stage2dContainer" class="stage-2d-container hidden">
+            <!-- 2D WYSIWYG Bake Stage -->
+            <div id="stage2dBakeArea" class="stage-2d-subarea active">
+              <div class="canvas-header">
+                <span class="canvas-title">Interactive Surface Precision Canvas</span>
+                <span class="canvas-hint">Drag sticker with sub-pixel precision • Mouse wheel zooms</span>
+              </div>
+              <div class="preview-stage canvas-stage">
+                <canvas id="bakeCanvas" width="512" height="512" class="interactive-canvas"></canvas>
+                <div id="bakePreviewPlaceholder" class="preview-placeholder">
+                  Loading weapon texture canvas...
+                </div>
+              </div>
+            </div>
+
+            <!-- Curtain Comparison Mode (Default in Color Studio) -->
+            <div id="curtainCompareStage" class="curtain-stage-container hidden">
+              <div class="checkerboard curtain-viewport" id="curtainViewport">
+                <img id="curtainBgImg" src="" alt="Original Texture" class="curtain-img-bg">
+                <div class="curtain-fg-wrap" id="curtainFgWrap">
+                  <canvas id="curtainFgCanvas" class="curtain-canvas-fg"></canvas>
+                </div>
+                <div class="curtain-divider" id="curtainDivider" style="left: 50%;">
+                  <div class="curtain-handle" id="curtainHandle">
+                    <span>‹ ›</span>
+                  </div>
+                </div>
+                <div class="curtain-badge left">Before (Original)</div>
+                <div class="curtain-badge right">After (Graded)</div>
+              </div>
+            </div>
+
+            <!-- Side-by-Side Comparison Mode -->
+            <div class="compare-container hidden" id="sideCompareStage">
+              <div class="compare-box">
+                <div class="compare-label">Original Texture (Before)</div>
+                <div class="checkerboard compare-stage">
+                  <img id="colorOrigImg" src="" alt="Original Texture">
+                </div>
+              </div>
+              <div class="compare-box">
+                <div class="compare-label">Graded Output (After)</div>
+                <div class="checkerboard compare-stage">
+                  <canvas id="colorAdjustedCanvas" class="color-adjusted-canvas"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Draggable Horizontal Splitter (Resize Shelf) -->
+        <div class="studio-splitter splitter-bottom" id="splitterBottom" title="Drag to resize Bottom Shelf (Double click to reset)"></div>
+
+        <!-- Expandable Bottom Utility Shelf / Content Drawer (#studioDrawer) -->
+        <section class="studio-bottom-shelf" id="studioDrawer" data-purpose="asset-browser-drawer">
+          <!-- Integrated Activity Rail -->
+          <aside class="shelf-activity-rail" id="studioActivityRail" data-purpose="primary-navigation-rail">
+            <div class="rail-nav-group">
+              <button type="button" class="rail-btn active" id="railBtnLoadout" title="Visual Weapon Loadout (Ctrl+B)">
+                <svg class="glyph glyph-sm"><use href="#glyph-weapon"></use></svg>
+                <span class="rail-tooltip">Loadout</span>
+              </button>
+              <button type="button" class="rail-btn" id="railBtnSkinLibrary" title="Skin & Knife Asset Library">
+                <svg class="glyph glyph-sm"><use href="#glyph-palette"></use></svg>
+                <span class="rail-tooltip">Skins</span>
+              </button>
+              <button type="button" class="rail-btn" id="railBtnStickerLibrary" title="Sticker Asset Library">
+                <svg class="glyph glyph-sm"><use href="#glyph-sparkle"></use></svg>
+                <span class="rail-tooltip">Stickers</span>
+              </button>
+              <button type="button" class="rail-btn" id="railBtnProfiles" title="Saved Loadout Profiles">
+                <svg class="glyph glyph-sm"><use href="#glyph-save"></use></svg>
+                <span class="rail-tooltip">Profiles</span>
+              </button>
+            </div>
+            <div class="rail-bottom-group">
+              <button type="button" class="rail-btn" id="railBtnToggleDrawer" title="Toggle Bottom Shelf (Ctrl+B)">
+                <svg class="glyph glyph-xs rail-chevron-icon"><use href="#glyph-chevron-down"></use></svg>
+                <span class="rail-tooltip">Toggle (Ctrl+B)</span>
+              </button>
+            </div>
+          </aside>
+
+          <!-- Content Views Container -->
+          <div class="shelf-content-wrap">
+            <!-- View 1: Categorized Weapon Loadout (Default) -->
+            <div class="drawer-view active" id="drawerViewWeapons">
+              <div class="shelf-header-bar">
+                <div class="shelf-title-unit">
+                  <span class="pulse-dot-cyan"></span>
+                  <span class="shelf-title-label">WEAPON LOADOUT ARSENAL</span>
+                  <span class="shelf-subtitle-badge" id="drawerTeamSubtitle">CT Arsenal</span>
+                </div>
+                <div style="position: relative; min-width: 220px; max-width: 320px;">
+                  <input type="text" id="drawerWeaponSearch" class="styled-input drawer-search-input" placeholder="Filter weapons (e.g. ak, usp)...">
+                </div>
+              </div>
+              <div class="shelf-horizontal-scroll" id="drawerWeaponsScroll">
+                <!-- Pistols Section -->
+                <div class="shelf-weapon-category-col weapon-category-section" data-category="pistols">
+                  <div class="shelf-cat-header category-header" role="button" tabindex="0" title="Click to collapse / expand">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <svg class="glyph glyph-xs"><use href="#glyph-weapon"></use></svg>
+                      <span>Pistols</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <span class="cat-count-badge" id="catBadgePistols">0</span>
+                      <svg class="glyph glyph-xs cat-chevron"><use href="#glyph-chevron-down"></use></svg>
+                    </div>
+                  </div>
+                  <div class="shelf-cat-weapons-list category-weapons-grid" id="catGridPistols"></div>
+                </div>
+
+                <!-- Rifles & Snipers Section -->
+                <div class="shelf-weapon-category-col weapon-category-section" data-category="rifles">
+                  <div class="shelf-cat-header category-header" role="button" tabindex="0" title="Click to collapse / expand">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <svg class="glyph glyph-xs"><use href="#glyph-rifle"></use></svg>
+                      <span>Rifles & Snipers</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <span class="cat-count-badge" id="catBadgeRifles">0</span>
+                      <svg class="glyph glyph-xs cat-chevron"><use href="#glyph-chevron-down"></use></svg>
+                    </div>
+                  </div>
+                  <div class="shelf-cat-weapons-list category-weapons-grid" id="catGridRifles"></div>
+                </div>
+
+                <!-- SMGs Section -->
+                <div class="shelf-weapon-category-col weapon-category-section" data-category="smgs">
+                  <div class="shelf-cat-header category-header" role="button" tabindex="0" title="Click to collapse / expand">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <svg class="glyph glyph-xs"><use href="#glyph-smg"></use></svg>
+                      <span>SMGs</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <span class="cat-count-badge" id="catBadgeSmgs">0</span>
+                      <svg class="glyph glyph-xs cat-chevron"><use href="#glyph-chevron-down"></use></svg>
+                    </div>
+                  </div>
+                  <div class="shelf-cat-weapons-list category-weapons-grid" id="catGridSmgs"></div>
+                </div>
+
+                <!-- Heavy Weapons Section -->
+                <div class="shelf-weapon-category-col weapon-category-section" data-category="heavy">
+                  <div class="shelf-cat-header category-header" role="button" tabindex="0" title="Click to collapse / expand">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <svg class="glyph glyph-xs"><use href="#glyph-heavy"></use></svg>
+                      <span>Heavy</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <span class="cat-count-badge" id="catBadgeHeavy">0</span>
+                      <svg class="glyph glyph-xs cat-chevron"><use href="#glyph-chevron-down"></use></svg>
+                    </div>
+                  </div>
+                  <div class="shelf-cat-weapons-list category-weapons-grid" id="catGridHeavy"></div>
+                </div>
+
+                <!-- Equipment & Knives Section -->
+                <div class="shelf-weapon-category-col weapon-category-section" data-category="gear">
+                  <div class="shelf-cat-header category-header" role="button" tabindex="0" title="Click to collapse / expand">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <svg class="glyph glyph-xs"><use href="#glyph-gear-knife"></use></svg>
+                      <span>Equipment & Knives</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <span class="cat-count-badge" id="catBadgeGear">0</span>
+                      <svg class="glyph glyph-xs cat-chevron"><use href="#glyph-chevron-down"></use></svg>
+                    </div>
+                  </div>
+                  <div class="shelf-cat-weapons-list category-weapons-grid" id="catGridGear"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- View 2A: Skin Assets Library -->
+            <div class="drawer-view" id="drawerViewSkinLibrary">
+              <div class="shelf-header-bar">
+                <div class="shelf-title-unit">
+                  <span class="pulse-dot-cyan"></span>
+                  <span class="shelf-title-label">SKIN ASSETS LIBRARY</span>
+                  <div class="shelf-pills" id="skinCategoryTabs">
+                    <button type="button" class="filter-pill active" data-tab="all">All Skins</button>
+                    <button type="button" class="filter-pill" data-tab="weapons">Weapons</button>
+                    <button type="button" class="filter-pill" data-tab="knives">Knives</button>
+                    <button type="button" class="filter-pill" data-tab="gloves">Gloves</button>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <div class="shelf-drop-banner" id="skinDropZone" title="Click or Drag & Drop skin texture files or folder here">
+                    <svg class="glyph glyph-xs text-cyan"><use href="#glyph-folder"></use></svg>
+                    <span>Drop skin textures here to ingest</span>
+                  </div>
+                  <button type="button" id="skinBatchFilesBtn" class="btn btn-xs btn-primary" title="Add Skin File(s)">
+                    <svg class="glyph glyph-xs"><use href="#glyph-image"></use></svg> + Files
+                  </button>
+                  <button type="button" id="skinBatchFolderBtn" class="btn btn-xs btn-primary" title="Add Skin Folder">
+                    <svg class="glyph glyph-xs"><use href="#glyph-folder"></use></svg> + Folder
+                  </button>
+                </div>
+              </div>
+
+              <!-- Hidden File and Folder inputs for skins -->
+              <input type="file" id="skinFileInput" accept="image/png,image/jpeg,image/bmp,image/webp" multiple class="hidden-file-input">
+              <input type="file" id="skinFolderInput" webkitdirectory directory multiple class="hidden-file-input">
+
+              <!-- Upload Progress Indicator -->
+              <div id="skinUploadProgress" class="upload-progress-container hidden">
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 600;">
+                  <span id="skinUploadProgressText" class="text-cyan">Uploading skin assets...</span>
+                  <span id="skinUploadProgressPercent">0%</span>
+                </div>
+                <div class="upload-progress-bar-wrap">
+                  <div id="skinUploadProgressBar" class="upload-progress-bar-fill"></div>
+                </div>
+              </div>
+
+              <!-- Secondary Toolbar: Sub-Category Pills & Search -->
+              <div class="shelf-secondary-bar">
+                <div style="display: flex; align-items: center; gap: 6px; overflow-x: auto;">
+                  <!-- Weapons Category Filter Pills (Tier 1: Pistols, Rifles, SMGs, Heavy) -->
+                  <div class="shelf-pills hidden" id="weaponCategoryFilters">
+                    <button type="button" class="filter-pill active" data-weapon-cat="all">All Weapons</button>
+                    <button type="button" class="filter-pill" data-weapon-cat="pistols">Pistols</button>
+                    <button type="button" class="filter-pill" data-weapon-cat="rifles">Rifles & Snipers</button>
+                    <button type="button" class="filter-pill" data-weapon-cat="smgs">SMGs</button>
+                    <button type="button" class="filter-pill" data-weapon-cat="heavy">Heavy</button>
+                  </div>
+
+                  <!-- Specific Weapon Item Sub-Pills (Tier 2: USP, Deagle, AK-47, etc.) -->
+                  <div class="shelf-pills shelf-sub-pills hidden" id="weaponSubcatFilters">
+                    <!-- Populated dynamically based on selected weapon category -->
+                  </div>
+
+                  <!-- Knives Subcategory Filter Pills -->
+                  <div class="shelf-pills hidden" id="knifeSubcatFilters">
+                    <button type="button" class="filter-pill active" data-knife-type="all">All Knives</button>
+                    <button type="button" class="filter-pill" data-knife-type="Karambit">Karambit</button>
+                    <button type="button" class="filter-pill" data-knife-type="Butterfly">Butterfly</button>
+                    <button type="button" class="filter-pill" data-knife-type="M9 Bayonet">M9 Bayonet</button>
+                    <button type="button" class="filter-pill" data-knife-type="Bayonet">Bayonet</button>
+                    <button type="button" class="filter-pill" data-knife-type="Huntsman">Huntsman</button>
+                    <button type="button" class="filter-pill" data-knife-type="Bowie">Bowie</button>
+                    <button type="button" class="filter-pill" data-knife-type="Flip">Flip</button>
+                    <button type="button" class="filter-pill" data-knife-type="Gut">Gut</button>
+                    <button type="button" class="filter-pill" data-knife-type="Falchion">Falchion</button>
+                    <button type="button" class="filter-pill" data-knife-type="Daggers">Daggers</button>
+                    <button type="button" class="filter-pill" data-knife-type="Skeleton">Skeleton</button>
+                    <button type="button" class="filter-pill" data-knife-type="Nomad">Nomad</button>
+                    <button type="button" class="filter-pill" data-knife-type="Paracord">Paracord</button>
+                    <button type="button" class="filter-pill" data-knife-type="Survival">Survival</button>
+                    <button type="button" class="filter-pill" data-knife-type="Classic">Classic</button>
+                  </div>
+
+                  <!-- Gloves Subcategory Filter Pills -->
+                  <div class="shelf-pills hidden" id="gloveSubcatFilters">
+                    <button type="button" class="filter-pill active" data-glove-type="all">All Gloves</button>
+                    <button type="button" class="filter-pill" data-glove-type="sport">Sport</button>
+                    <button type="button" class="filter-pill" data-glove-type="specialist">Specialist</button>
+                    <button type="button" class="filter-pill" data-glove-type="moto">Moto</button>
+                    <button type="button" class="filter-pill" data-glove-type="handwrap">Hand Wraps</button>
+                    <button type="button" class="filter-pill" data-glove-type="driver">Driver</button>
+                    <button type="button" class="filter-pill" data-glove-type="hydra">Hydra</button>
+                    <button type="button" class="filter-pill" data-glove-type="bloodhound">Bloodhound</button>
+                    <button type="button" class="filter-pill" data-glove-type="sleeve">Sleeves & Arms</button>
+                  </div>
+                </div>
+
+                <div style="position: relative; min-width: 220px; max-width: 280px; flex-shrink: 0;">
+                  <input type="text" id="skinSearchInput" class="styled-input drawer-search-input" placeholder="Search skins (e.g. Fade, Dragon Lore)...">
+                </div>
+              </div>
+
+              <!-- Horizontal Gallery Grid -->
+              <div class="shelf-horizontal-scroll" id="skinLibraryGrid">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+
+            <!-- View 2B: Sticker Assets Library -->
+            <div class="drawer-view" id="drawerViewStickerLibrary">
+              <div class="shelf-header-bar">
+                <div class="shelf-title-unit">
+                  <span class="pulse-dot-cyan"></span>
+                  <span class="shelf-title-label">STICKER ASSETS LIBRARY</span>
+                  <div class="shelf-pills" id="stickerCatFilters">
+                    <button type="button" class="filter-pill active" data-cat="all">All Styles</button>
+                    <button type="button" class="filter-pill" data-cat="Custom / User">Custom</button>
+                    <button type="button" class="filter-pill" data-cat="Katowice 2014 Holo">Kato 14</button>
+                    <button type="button" class="filter-pill" data-cat="Tournament Holo">Holo</button>
+                    <button type="button" class="filter-pill" data-cat="Foil Collection">Foil</button>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <div class="shelf-drop-banner" id="stickerDropZone" title="Click or Drag & Drop sticker PNG files or folder here">
+                    <svg class="glyph glyph-xs text-cyan"><use href="#glyph-sparkle"></use></svg>
+                    <span>Drop stickers here to ingest</span>
+                  </div>
+                  <button type="button" id="stickerRestoreDefaultsBtn" class="btn btn-xs btn-secondary" title="Restore default tournament stickers">
+                    <svg class="glyph glyph-xs"><use href="#glyph-restore"></use></svg> Restore
+                  </button>
+                  <button type="button" id="stickerBatchFilesBtn" class="btn btn-xs btn-primary" title="Add Sticker File(s)">
+                    <svg class="glyph glyph-xs"><use href="#glyph-sparkle"></use></svg> + Files
+                  </button>
+                  <button type="button" id="stickerBatchFolderBtn" class="btn btn-xs btn-primary" title="Add Sticker Folder">
+                    <svg class="glyph glyph-xs"><use href="#glyph-folder"></use></svg> + Folder
+                  </button>
+                </div>
+              </div>
+
+              <!-- Hidden File and Folder inputs for stickers -->
+              <input type="file" id="stickerFileInput" accept="image/png,image/jpeg,image/bmp,image/webp" multiple class="hidden-file-input">
+              <input type="file" id="stickerFolderInput" webkitdirectory directory multiple class="hidden-file-input">
+
+              <!-- Upload Progress Indicator -->
+              <div id="stickerUploadProgress" class="upload-progress-container hidden">
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 600;">
+                  <span id="stickerUploadProgressText" class="text-cyan">Uploading sticker assets...</span>
+                  <span id="stickerUploadProgressPercent">0%</span>
+                </div>
+                <div class="upload-progress-bar-wrap">
+                  <div id="stickerUploadProgressBar" class="upload-progress-bar-fill"></div>
+                </div>
+              </div>
+
+              <!-- Secondary Toolbar: Search -->
+              <div class="shelf-secondary-bar">
+                <div style="position: relative; width: 100%; max-width: 320px;">
+                  <input type="text" id="stickerSearchInput" class="styled-input drawer-search-input" placeholder="Search stickers (e.g. Titan, Crown, Kato 14)...">
+                </div>
+              </div>
+
+              <!-- Horizontal Gallery Grid -->
+              <div class="shelf-horizontal-scroll" id="stickerLibraryGrid">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+
+            <!-- View 3: Profiles & Snapshots -->
+            <div class="drawer-view" id="drawerViewProfiles">
+              <div class="shelf-header-bar">
+                <div class="shelf-title-unit">
+                  <span class="pulse-dot-cyan"></span>
+                  <span class="shelf-title-label">LOADOUT PROFILES & SNAPSHOTS</span>
+                </div>
+                <button type="button" id="drawerNewProfileBtn" class="btn btn-xs btn-primary" title="Save current loadout snapshot">
+                  <svg class="glyph glyph-xs"><use href="#glyph-save"></use></svg> + Snapshot
+                </button>
+              </div>
+              <div class="shelf-horizontal-scroll" id="drawerProfilesList">
+                <div style="display: flex; align-items: center; justify-content: center; width: 100%; color: var(--text-titanium-muted); font-size: 11px; font-family: var(--font-mono);">
+                  Loading profiles...
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Stage Footer Hints -->
+        <footer class="viewport3d-footer" id="stageFooter">
+          <div id="stageFooter3dHints" class="footer-hint-group">
+            <span><svg class="glyph glyph-xs"><use href="#glyph-mouse"></use></svg> <strong>Left Drag:</strong> Orbit 360°</span>
+            <span><svg class="glyph glyph-xs"><use href="#glyph-mouse"></use></svg> <strong>Right Drag:</strong> Pan</span>
+            <span><svg class="glyph glyph-xs"><use href="#glyph-scroll"></use></svg> <strong>Scroll:</strong> Zoom</span>
+          </div>
+          <div id="stageFooter2dHints" class="footer-hint-group hidden">
+            <span><svg class="glyph glyph-xs"><use href="#glyph-mouse"></use></svg> <strong>Drag:</strong> Position Sticker</span>
+            <span><svg class="glyph glyph-xs"><use href="#glyph-scroll"></use></svg> <strong>Scroll:</strong> Zoom Canvas</span>
+            <span><svg class="glyph glyph-xs"><use href="#glyph-target"></use></svg> <strong>Sub-pixel UV:</strong> Precision Burn</span>
+          </div>
+          <span class="footer-sync-notice">Live synchronized with Inspector Dock in real-time.</span>
+        </footer>
+      </main>
+
+      <!-- Draggable Splitter Right (Inspector Dock Resizer) -->
+      <div class="studio-splitter splitter-right" id="splitterRight" title="Drag to resize Inspector Dock (Double click to reset)"></div>
+
+      <!-- 4. Right Contextual Inspector Dock (Zero-Modal Workflow) -->
+      <aside class="studio-inspector-dock" id="studioInspectorDock">
+        <!-- Dock Tab Navigation Header (Icon-Only Segmented Dock Bar) -->
+        <nav class="studio-dock-header inspector-tab-rail" aria-label="Inspector Dock Tabs">
+          <div class="dock-tab-icon-group" role="tablist">
+            <button type="button" class="dock-tab nav-tab icon-only active" data-tab="slots" id="dockTabSlots" role="tab" aria-selected="true" title="Dynamic Texture Slots &amp; Assets">
+              <svg class="glyph glyph-xs"><use href="#glyph-target"></use></svg>
+            </button>
+            <button type="button" class="dock-tab nav-tab icon-only" data-tab="bake" id="dockTabBake" role="tab" aria-selected="false" title="Interactive Sticker Baking">
+              <svg class="glyph glyph-xs"><use href="#glyph-flame"></use></svg>
+            </button>
+            <button type="button" class="dock-tab nav-tab icon-only" data-tab="color" id="dockTabColor" role="tab" aria-selected="false" title="Photographic Color Studio Pro">
+              <svg class="glyph glyph-xs"><use href="#glyph-palette"></use></svg>
+            </button>
+            <button type="button" class="dock-tab nav-tab icon-only" data-tab="finishes" id="dockTabFinishes" role="tab" aria-selected="false" title="Metallic Specular Chrome, Procedural Wear &amp; StatTrak LED">
+              <svg class="glyph glyph-xs"><use href="#glyph-sparkle"></use></svg>
+            </button>
+            <button type="button" class="dock-tab nav-tab icon-only" data-tab="gloves" id="dockTabGloves" role="tab" aria-selected="false" title="1-Click Glove Suite &amp; Batch Injector">
+              <svg class="glyph glyph-xs"><use href="#glyph-glove"></use></svg>
+            </button>
+          </div>
+          <div class="dock-header-active-badge">
+            <span class="active-tab-title" id="inspectorActiveTabTitle">SLOTS &amp; ASSETS</span>
+          </div>
+        </nav>
+
+        <!-- Dock Panes Body -->
+        <div class="studio-dock-body">
+          <!-- Dock Pane 1: Dynamic Texture Slots -->
+          <section id="tabSlots" class="tab-pane active">
+            <div class="dock-pane-header">
+              <div class="pane-title-cluster">
+                <span class="pulse-pip-cyan"></span>
+                <span class="dock-pane-title">TEXTURE SLOTS</span>
+                <span class="dock-count-badge" id="slotsCountBadge">11 LOADED</span>
+              </div>
+              <div class="pane-telemetry-cluster">
+                <svg class="glyph glyph-xs text-emerald"><use href="#glyph-check"></use></svg>
+                <span class="telemetry-text">QUANTIZED 8-BIT</span>
+              </div>
+            </div>
+
+            <!-- Filter Pills -->
+            <div class="slot-filters" id="slotFilters">
+              <button type="button" class="filter-pill active" data-filter="all">ALL</button>
+              <button type="button" class="filter-pill" data-filter="sticker">STICKERS</button>
+              <button type="button" class="filter-pill" data-filter="skin">SKINS</button>
+              <button type="button" class="filter-pill" data-filter="glove">GLOVES</button>
+              <button type="button" class="filter-pill" data-filter="sleeve">SLEEVES</button>
+              <button type="button" class="filter-pill" data-filter="stattrak">STATTRAK</button>
+            </div>
+
+            <!-- Dynamic Grid of Texture Cards -->
+            <div class="texture-grid" id="textureGrid">
+              <!-- Cards injected via JavaScript -->
+            </div>
+          </section>
+
+          <!-- Dock Pane 2: Bake Sticker WYSIWYG Settings -->
+          <section id="tabBake" class="tab-pane">
+            <div class="dock-pane-header">
+              <div class="pane-title-cluster">
+                <span class="pulse-pip-cyan"></span>
+                <span class="dock-pane-title">BAKE CANVAS</span>
+                <span class="dock-count-badge">COMPOSITOR</span>
+              </div>
+              <div class="pane-telemetry-cluster">
+                <svg class="glyph glyph-xs text-amber"><use href="#glyph-flame"></use></svg>
+                <span class="telemetry-text">SUB-PIXEL UV</span>
+              </div>
+            </div>
+
+            <!-- Mode Switcher: 3D Surface vs 2D Precision Canvas vs Split View -->
+            <div class="bake-mode-selector" style="display: flex; gap: 6px; margin-bottom: 12px; background: rgba(0,0,0,0.3); padding: 4px; border-radius: 8px; border: 1px solid var(--border);">
+              <button type="button" class="filter-pill active" id="bakeMode3DBtn" data-mode="3d" style="flex: 1; justify-content: center; font-size: 0.78rem;">
+                <svg class="glyph glyph-xs"><use href="#glyph-inspect"></use></svg> 3D Surface
+              </button>
+              <button type="button" class="filter-pill" id="bakeMode2DBtn" data-mode="2d" style="flex: 1; justify-content: center; font-size: 0.78rem;">
+                <svg class="glyph glyph-xs"><use href="#glyph-tune"></use></svg> 2D Canvas
+              </button>
+              <button type="button" class="filter-pill" id="bakeModeSplitBtn" data-mode="split" style="flex: 1; justify-content: center; font-size: 0.78rem;">
+                <svg class="glyph glyph-xs"><use href="#glyph-split"></use></svg> Split View
+              </button>
+            </div>
+
+            <!-- 3D Surface Dragging Notice & Interaction Mode Toggle -->
+            <div id="bake3dNotice" style="display: flex; align-items: center; justify-content: space-between; background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: 6px; padding: 7px 10px; margin-bottom: 12px;">
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--accent-cyan);">
+                <svg class="glyph glyph-xs"><use href="#glyph-sparkle"></use></svg>
+                <span><strong>3D Surface Drag:</strong> Drag on weapon in 3D to place</span>
+              </div>
+              <button type="button" class="action-pill active" id="bake3dDragToggleBtn" title="Toggle between surface dragging and camera orbit in 3D" style="padding: 2px 8px; font-size: 0.72rem;">
+                <span id="bake3dDragToggleLabel">Drag: ON</span>
+              </button>
+            </div>
+
+            <div class="form-group">
+              <label for="bakeTargetSkin">Target Body Texture:</label>
+              <select id="bakeTargetSkin" class="styled-select">
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Select Sticker:</label>
+              <div class="sticker-source-row">
+                <button type="button" id="bakePickLibraryBtn" class="btn btn-primary" style="flex: 1;">
+                  <span class="icon"><svg class="glyph glyph-sm"><use href="#glyph-sparkle"></use></svg></span>
+                  <span>Choose from Asset Library</span>
+                </button>
+              </div>
+              <div class="drop-zone mini" id="bakeDropZone" style="margin-top: 8px;">
+                <input type="file" id="bakeFileInput" accept="image/*" class="file-input">
+                <div class="drop-prompt">
+                  <span class="icon"><svg class="glyph glyph-sm"><use href="#glyph-folder"></use></svg></span>
+                  <span>Or Drop Sticker PNG / <strong>Browse</strong></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Position Preset:</label>
+              <div class="preset-buttons" id="bakePresets">
+                <button type="button" class="preset-btn active" data-preset="center">Center</button>
+                <button type="button" class="preset-btn" data-preset="silencer">Silencer</button>
+                <button type="button" class="preset-btn" data-preset="slide">Slide</button>
+                <button type="button" class="preset-btn" data-preset="wood">Wood</button>
+                <button type="button" class="preset-btn" data-preset="mag">Mag</button>
+                <button type="button" class="preset-btn" data-preset="stock">Stock</button>
+              </div>
+            </div>
+
+            <!-- Interactive Position Coordinates & Fine-Tuning Controls -->
+            <div class="form-group" style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px; margin-bottom: 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <label style="margin: 0; font-size: 0.84rem; font-weight: 600;">Sticker Position (X, Y):</label>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <button type="button" class="btn btn-xs btn-secondary" id="bakeCenterBtn" title="Center sticker on texture">Center</button>
+                  <span class="coord-badge" style="font-size: 0.72rem;">X: <strong id="bakeCoordX">200</strong>, Y: <strong id="bakeCoordY">180</strong></span>
+                </div>
+              </div>
+
+              <!-- Sliders & Inputs Row -->
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="font-size: 0.78rem; font-family: monospace; color: var(--accent-cyan); width: 18px;">X:</span>
+                  <input type="range" id="bakeSliderX" min="0" max="512" value="200" class="slider" style="flex: 1;">
+                  <input type="number" id="bakeInputX" min="0" max="2048" value="200" class="styled-input" style="width: 64px; padding: 3px 6px; font-size: 0.8rem; text-align: center;">
+                  <span style="font-size: 0.75rem; color: var(--text-dim);">px</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="font-size: 0.78rem; font-family: monospace; color: var(--accent-gold); width: 18px;">Y:</span>
+                  <input type="range" id="bakeSliderY" min="0" max="512" value="180" class="slider" style="flex: 1;">
+                  <input type="number" id="bakeInputY" min="0" max="2048" value="180" class="styled-input" style="width: 64px; padding: 3px 6px; font-size: 0.8rem; text-align: center;">
+                  <span style="font-size: 0.75rem; color: var(--text-dim);">px</span>
+                </div>
+              </div>
+
+              <!-- Precision Nudge D-Pad -->
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05);">
+                <span style="font-size: 0.76rem; color: var(--text-muted);">Precision Nudge:</span>
+                <div style="display: flex; gap: 4px; align-items: center;">
+                  <button type="button" class="btn btn-xs btn-secondary" id="bakeNudgeLeft" title="Nudge Left (-5px)"><svg class="glyph glyph-xs"><use href="#glyph-arrow-left"></use></svg></button>
+                  <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <button type="button" class="btn btn-xs btn-secondary" id="bakeNudgeUp" title="Nudge Up (-5px)" style="padding: 2px 6px;"><svg class="glyph glyph-xs"><use href="#glyph-arrow-up"></use></svg></button>
+                    <button type="button" class="btn btn-xs btn-secondary" id="bakeNudgeDown" title="Nudge Down (+5px)" style="padding: 2px 6px;"><svg class="glyph glyph-xs"><use href="#glyph-arrow-down"></use></svg></button>
+                  </div>
+                  <button type="button" class="btn btn-xs btn-secondary" id="bakeNudgeRight" title="Nudge Right (+5px)"><svg class="glyph glyph-xs"><use href="#glyph-arrow-right"></use></svg></button>
+                  <button type="button" class="btn btn-xs btn-secondary" id="bakeNudgeStepToggle" title="Toggle nudge step" style="font-size: 0.7rem; margin-left: 4px; min-width: 38px;">5px</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group half">
+                <label for="bakeScale">Scale: <span id="bakeScaleVal">1.00x</span></label>
+                <input type="range" id="bakeScale" min="0.2" max="2.5" step="0.05" value="1.0" class="slider">
+              </div>
+              <div class="form-group half">
+                <label for="bakeRotation">Rotation: <span id="bakeRotationVal">0°</span></label>
+                <input type="range" id="bakeRotation" min="0" max="360" step="5" value="0" class="slider">
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 6px;">
+              <div class="slider-header">
+                <label for="bakeScrape">Sticker Scrape / Wear: <span id="bakeScrapeVal">0% (Mint)</span></label>
+              </div>
+              <input type="range" id="bakeScrape" min="0" max="100" step="5" value="0" class="slider">
+            </div>
+
+            <div class="btn-group-row" style="display: flex; gap: 10px; margin-top: 14px;">
+              <button type="button" id="bakeApplyBtn" class="btn-inject" style="flex: 2; height: 32px;" title="Bake and composite sticker into target weapon texture">
+                <svg class="glyph glyph-xs"><use href="#glyph-flame"></use></svg>
+                <span>BAKE TO SURFACE</span>
+              </button>
+              <button type="button" id="bakeResetBtn" class="btn-revert" style="flex: 1; height: 32px; justify-content: center;" title="Clear sticker from canvas">
+                <svg class="glyph glyph-xs"><use href="#glyph-restore"></use></svg>
+                <span>Reset</span>
+              </button>
+            </div>
+
+            <div class="form-group" style="margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border);">
+              <button type="button" id="syncPwModelsBtn" class="btn btn-secondary btn-large" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;" title="Bake & Sync weapon textures to Player (p_*.mdl) and World (w_*.mdl) models">
+                <svg class="glyph glyph-sm"><use href="#glyph-sync"></use></svg>
+                <span id="syncPwBtnText">Sync P/W Models</span>
+              </button>
+              <p class="section-desc" style="margin-top: 6px; font-size: 0.75rem;">Propagates viewmodel skins to third-person dropped and held models.</p>
+            </div>
+          </section>
+
+          <!-- Dock Pane 3: Photographic Color Grading Studio -->
+          <section id="tabColor" class="tab-pane">
+            <div class="dock-pane-header">
+              <div class="pane-title-cluster">
+                <span class="pulse-pip-cyan"></span>
+                <span class="dock-pane-title">COLOR LAB PRO</span>
+                <span class="dock-count-badge">8-CHANNEL HSL</span>
+              </div>
+              <div class="pane-telemetry-cluster">
+                <svg class="glyph glyph-xs text-cyan"><use href="#glyph-palette"></use></svg>
+                <span class="telemetry-text">SIGMOID S-CURVE</span>
+              </div>
+            </div>
+
+            <!-- Target Texture Selection -->
+            <div class="form-group">
+              <label for="colorTargetSelect">Target Texture:</label>
+              <select id="colorTargetSelect" class="styled-select">
+                <!-- Populated dynamically with skins, gloves, and sleeves -->
+              </select>
+            </div>
+
+            <!-- Eyedropper and View Switch in Dock -->
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+              <button type="button" id="colorEyedropperBtn" class="btn btn-sm btn-secondary" title="Click to sample pixel from canvas and auto-select its HSL channel">
+                <span class="icon"><svg class="glyph glyph-xs"><use href="#glyph-eyedropper"></use></svg></span>
+                <span>Eyedropper</span>
+              </button>
+              <span id="eyedropperSample" class="color-sample-pill hidden" title="Sampled color hex">#FFFFFF</span>
+              <div class="preview-mode-switch">
+                <button type="button" id="curtainModeBtn" class="btn btn-xs btn-secondary active">Curtain</button>
+                <button type="button" id="sideModeBtn" class="btn btn-xs btn-secondary">Side-by-Side</button>
+              </div>
+            </div>
+
+            <!-- Presets Row -->
+            <div class="form-group">
+              <label>Quick Style Presets:</label>
+              <div class="preset-chips" id="colorPresetChips">
+                <button type="button" class="preset-chip active" data-preset="neutral">Neutral Reset</button>
+                <button type="button" class="preset-chip" data-preset="vibrant_cs2">Vibrant CS2</button>
+                <button type="button" class="preset-chip" data-preset="dark_ops">Dark Ops</button>
+                <button type="button" class="preset-chip" data-preset="warm_golden">Warm Golden</button>
+                <button type="button" class="preset-chip" data-preset="cyber_neon">Cyber Neon</button>
+              </div>
+            </div>
+
+            <!-- Live RGB Histogram & Clipping Meter -->
+            <div class="histogram-card">
+              <div class="histogram-header">
+                <span class="histogram-title">Live RGB Histogram</span>
+                <div class="clipping-indicators">
+                  <span id="shadowClipBadge" class="clipping-badge shadow" title="Shadows clipping (black 0)">Shadows: 0.0%</span>
+                  <span id="highlightClipBadge" class="clipping-badge highlight" title="Highlights clipping (white 255)">Highlights: 0.0%</span>
+                </div>
+              </div>
+              <canvas id="colorHistogramCanvas" width="256" height="48" class="histogram-canvas"></canvas>
+            </div>
+
+            <!-- Picsart / Lightroom Collapsible Structured Tool Sections -->
+            <div class="studio-accordion" id="colorAccordion">
+              <!-- Section 1: Light & Tone -->
+              <div class="accordion-item active" data-section="light">
+                <div class="accordion-header" id="accHeaderLight">
+                  <div class="acc-title">
+                    <span class="acc-icon"><svg class="glyph glyph-sm"><use href="#glyph-sun"></use></svg></span>
+                    <span class="acc-label">Light & Tone</span>
+                  </div>
+                  <span class="acc-arrow"><svg class="glyph glyph-xs"><use href="#glyph-chevron-down"></use></svg></span>
+                </div>
+                <div class="accordion-content">
+                  <div class="sliders-grid">
+                    <div class="slider-control">
+                      <div class="slider-header">
+                        <label for="colorBrightness">Brightness:</label>
+                        <span id="colorBrightnessVal" class="slider-val">0</span>
+                      </div>
+                      <input type="range" id="colorBrightness" min="-100" max="100" step="1" value="0" class="slider">
+                    </div>
+                    <div class="slider-control">
+                      <div class="slider-header">
+                        <label for="colorContrast">Contrast (Sigmoid S-Curve):</label>
+                        <span id="colorContrastVal" class="slider-val">0</span>
+                      </div>
+                      <input type="range" id="colorContrast" min="-100" max="100" step="1" value="0" class="slider">
+                    </div>
+                    <div class="slider-control">
+                      <div class="slider-header">
+                        <label for="colorShadows">Shadows Boost:</label>
+                        <span id="colorShadowsVal" class="slider-val">0</span>
+                      </div>
+                      <input type="range" id="colorShadows" min="-100" max="100" step="1" value="0" class="slider">
+                    </div>
+                    <div class="slider-control">
+                      <div class="slider-header">
+                        <label for="colorHighlights">Highlights Recovery:</label>
+                        <span id="colorHighlightsVal" class="slider-val">0</span>
+                      </div>
+                      <input type="range" id="colorHighlights" min="-100" max="100" step="1" value="0" class="slider">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Section 2: Colors & White Balance -->
+              <div class="accordion-item active" data-section="colors">
+                <div class="accordion-header" id="accHeaderColors">
+                  <div class="acc-title">
+                    <span class="acc-icon"><svg class="glyph glyph-sm"><use href="#glyph-drop"></use></svg></span>
+                    <span class="acc-label">Colors & White Balance</span>
+                  </div>
+                  <span class="acc-arrow"><svg class="glyph glyph-xs"><use href="#glyph-chevron-down"></use></svg></span>
+                </div>
+                <div class="accordion-content">
+                  <div class="sliders-grid">
+                    <div class="slider-control">
+                      <div class="slider-header">
+                        <label for="colorVibrance">Vibrance (Smart Saturation):</label>
+                        <span id="colorVibranceVal" class="slider-val">0</span>
+                      </div>
+                      <input type="range" id="colorVibrance" min="-100" max="100" step="1" value="0" class="slider">
+                    </div>
+                    <div class="slider-control">
+                      <div class="slider-header">
+                        <label for="colorSaturation">Saturation:</label>
+                        <span id="colorSaturationVal" class="slider-val">0</span>
+                      </div>
+                      <input type="range" id="colorSaturation" min="-100" max="100" step="1" value="0" class="slider">
+                    </div>
+                    <div class="slider-control">
+                      <div class="slider-header">
+                        <label for="colorGlobalHue">Global Hue Rotation:</label>
+                        <span id="colorGlobalHueVal" class="slider-val">0°</span>
+                      </div>
+                      <input type="range" id="colorGlobalHue" min="-180" max="180" step="1" value="0" class="slider hue-spectrum-slider">
+                    </div>
+                    <div class="slider-control">
+                      <div class="slider-header">
+                        <label for="colorTemp">Temperature (Kelvin):</label>
+                        <span id="colorTempVal" class="slider-val">0</span>
+                      </div>
+                      <input type="range" id="colorTemp" min="-100" max="100" step="1" value="0" class="slider temp-slider">
+                    </div>
+                    <div class="slider-control">
+                      <div class="slider-header">
+                        <label for="colorTint">Tint (Green/Magenta):</label>
+                        <span id="colorTintVal" class="slider-val">0</span>
+                      </div>
+                      <input type="range" id="colorTint" min="-100" max="100" step="1" value="0" class="slider tint-slider">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Section 3: Details & Clarity -->
+              <div class="accordion-item active" data-section="details">
+                <div class="accordion-header" id="accHeaderDetails">
+                  <div class="acc-title">
+                    <span class="acc-icon"><svg class="glyph glyph-sm"><use href="#glyph-gem"></use></svg></span>
+                    <span class="acc-label">Details & Clarity</span>
+                  </div>
+                  <span class="acc-arrow"><svg class="glyph glyph-xs"><use href="#glyph-chevron-down"></use></svg></span>
+                </div>
+                <div class="accordion-content">
+                  <div class="sliders-grid">
+                    <div class="slider-control">
+                      <div class="slider-header">
+                        <label for="colorClarity">Clarity & Mid-tone Contrast:</label>
+                        <span id="colorClarityVal" class="slider-val">0</span>
+                      </div>
+                      <input type="range" id="colorClarity" min="-100" max="100" step="1" value="0" class="slider">
+                    </div>
+                    <div class="slider-control">
+                      <div class="slider-header">
+                        <label for="colorSharpen">Fine Detail Sharpening:</label>
+                        <span id="colorSharpenVal" class="slider-val">0</span>
+                      </div>
+                      <input type="range" id="colorSharpen" min="-100" max="100" step="1" value="0" class="slider">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Section 4: HSL Pro (8-Channel Selective Color Mixer) -->
+              <div class="accordion-item active" data-section="hsl">
+                <div class="accordion-header" id="accHeaderHsl">
+                  <div class="acc-title">
+                    <span class="acc-icon"><svg class="glyph glyph-sm"><use href="#glyph-palette"></use></svg></span>
+                    <span class="acc-label">HSL Pro: 8-Channel Selective Mixer</span>
+                  </div>
+                  <span class="acc-arrow"><svg class="glyph glyph-xs"><use href="#glyph-chevron-down"></use></svg></span>
+                </div>
+                <div class="accordion-content">
+                  <div class="hsl-mixer-wrapper">
+                    <div class="hsl-swatches-bar" id="hslSwatchesBar">
+                      <button type="button" class="hsl-swatch" data-channel="red" title="Red (0°)" style="--swatch-color: #ef4444;"><span class="swatch-dot"></span><span class="swatch-badge"></span></button>
+                      <button type="button" class="hsl-swatch" data-channel="orange" title="Orange (30°)" style="--swatch-color: #f97316;"><span class="swatch-dot"></span><span class="swatch-badge"></span></button>
+                      <button type="button" class="hsl-swatch active" data-channel="yellow" title="Yellow (60°)" style="--swatch-color: #eab308;"><span class="swatch-dot"></span><span class="swatch-badge"></span></button>
+                      <button type="button" class="hsl-swatch" data-channel="green" title="Green (120°)" style="--swatch-color: #22c55e;"><span class="swatch-dot"></span><span class="swatch-badge"></span></button>
+                      <button type="button" class="hsl-swatch" data-channel="cyan" title="Cyan (180°)" style="--swatch-color: #06b6d4;"><span class="swatch-dot"></span><span class="swatch-badge"></span></button>
+                      <button type="button" class="hsl-swatch" data-channel="blue" title="Blue (240°)" style="--swatch-color: #3b82f6;"><span class="swatch-dot"></span><span class="swatch-badge"></span></button>
+                      <button type="button" class="hsl-swatch" data-channel="purple" title="Purple (280°)" style="--swatch-color: #a855f7;"><span class="swatch-dot"></span><span class="swatch-badge"></span></button>
+                      <button type="button" class="hsl-swatch" data-channel="magenta" title="Magenta (320°)" style="--swatch-color: #ec4899;"><span class="swatch-dot"></span><span class="swatch-badge"></span></button>
+                    </div>
+
+                    <div class="hsl-channel-panel" id="hslChannelPanel">
+                      <div class="hsl-channel-header">
+                        <span class="hsl-active-title">Channel: <strong id="hslActiveChannelName">Yellow (60°)</strong></span>
+                        <div style="display: flex; gap: 6px;">
+                          <button type="button" id="hslResetChannelBtn" class="btn btn-xs btn-secondary">Reset Channel</button>
+                          <button type="button" id="hslResetAllBtn" class="btn btn-xs btn-secondary">Reset All HSL</button>
+                        </div>
+                      </div>
+                      <div class="sliders-grid">
+                        <div class="slider-control">
+                          <div class="slider-header">
+                            <label for="hslHueSlider">Hue Shift:</label>
+                            <span id="hslHueSliderVal" class="slider-val">0°</span>
+                          </div>
+                          <input type="range" id="hslHueSlider" min="-180" max="180" step="1" value="0" class="slider hue-spectrum-slider">
+                        </div>
+                        <div class="slider-control">
+                          <div class="slider-header">
+                            <label for="hslSatSlider">Saturation:</label>
+                            <span id="hslSatSliderVal" class="slider-val">0</span>
+                          </div>
+                          <input type="range" id="hslSatSlider" min="-100" max="100" step="1" value="0" class="slider">
+                        </div>
+                        <div class="slider-control">
+                          <div class="slider-header">
+                            <label for="hslLightSlider">Lightness:</label>
+                            <span id="hslLightSliderVal" class="slider-val">0</span>
+                          </div>
+                          <input type="range" id="hslLightSlider" min="-100" max="100" step="1" value="0" class="slider">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="color-action-row" style="margin-top: 16px; display: flex; gap: 10px;">
+              <button type="button" id="colorApplyBtn" class="btn-inject" style="flex: 2; height: 34px;" title="Apply photographic color grading to model texture">
+                <svg class="glyph glyph-xs"><use href="#glyph-palette"></use></svg>
+                <span>APPLY COLOR GRADING</span>
+              </button>
+              <button type="button" id="colorResetBtn" class="btn-revert" style="flex: 1; height: 34px; justify-content: center;" title="Reset all grading adjustments">
+                <svg class="glyph glyph-xs"><use href="#glyph-restore"></use></svg>
+                <span>Reset All</span>
+              </button>
+            </div>
+          </section>
+
+          <!-- Dock Pane 4: 1-Click Glove Suite & Batch Injector -->
+          <section id="tabGloves" class="tab-pane">
+            <div class="dock-pane-header">
+              <div class="pane-title-cluster">
+                <span class="pulse-pip-cyan"></span>
+                <span class="dock-pane-title">1-CLICK GLOVE SUITE</span>
+                <span class="dock-count-badge">DUAL RIG</span>
+              </div>
+              <div class="pane-telemetry-cluster">
+                <svg class="glyph glyph-xs text-cyan"><use href="#glyph-glove"></use></svg>
+                <span class="telemetry-text">1-CLICK SYNC</span>
+              </div>
+            </div>
+
+            <div class="glove-mode-tabs" style="margin-bottom: 12px;">
+              <button type="button" class="glove-mode-btn active" id="gloveModeImageBtn" data-mode="image">
+                <svg class="glyph glyph-xs"><use href="#glyph-palette"></use></svg>
+                <span>Batch Image Injector</span>
+              </button>
+              <button type="button" class="glove-mode-btn" id="gloveModeTransferBtn" data-mode="transfer">
+                <svg class="glyph glyph-xs"><use href="#glyph-restore"></use></svg>
+                <span>Transfer from Weapon</span>
+              </button>
+              <button type="button" class="glove-mode-btn" id="gloveModeSleeveBtn" data-mode="sleeve">
+                <svg class="glyph glyph-xs"><use href="#glyph-sparkle"></use></svg>
+                <span>3D Sleeve Transplant</span>
+              </button>
+            </div>
+
+            <!-- Mode A: Batch Raw Image Injector -->
+            <div id="gloveModeImageSection" class="glove-submode active">
+              <div class="glove-dropzones-grid">
+                <!-- Left Hand Card -->
+                <div class="glove-drop-card">
+                  <div class="glove-card-header">
+                    <span class="card-title">Left Hand (sport_left)</span>
+                    <span id="gloveMetaLeft" class="glove-meta-badge">Not Loaded</span>
+                  </div>
+                  <div id="gloveDropzoneLeft" class="glove-dropzone" title="Click or Drag & Drop Left Glove Image">
+                    <input type="file" id="gloveFileInputLeft" accept="image/png,image/jpeg,image/bmp,image/webp" class="hidden-file-input">
+                    <div id="gloveEmptyLeft" class="glove-dropzone-empty">
+                      <div class="dropzone-icon"><svg class="glyph glyph-lg"><use href="#glyph-glove"></use></svg></div>
+                      <p><strong>Left Hand Glove</strong></p>
+                      <p class="dropzone-sub">Drop PNG / BMP / JPG / WEBP</p>
+                    </div>
+                    <div id="glovePreviewContainerLeft" class="glove-preview-container hidden">
+                      <img id="glovePreviewImgLeft" class="glove-dropzone-preview" alt="Left Glove Preview">
+                      <button type="button" id="gloveClearLeftBtn" class="glove-clear-btn" title="Remove Left Image">&times;</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Right Hand Card -->
+                <div class="glove-drop-card">
+                  <div class="glove-card-header">
+                    <span class="card-title">Right Hand (sport_right)</span>
+                    <span id="gloveMetaRight" class="glove-meta-badge">Not Loaded</span>
+                  </div>
+                  <div id="gloveDropzoneRight" class="glove-dropzone" title="Click or Drag & Drop Right Glove Image">
+                    <input type="file" id="gloveFileInputRight" accept="image/png,image/jpeg,image/bmp,image/webp" class="hidden-file-input">
+                    <div id="gloveEmptyRight" class="glove-dropzone-empty">
+                      <div class="dropzone-icon"><svg class="glyph glyph-lg"><use href="#glyph-glove"></use></svg></div>
+                      <p><strong>Right Hand Glove</strong></p>
+                      <p class="dropzone-sub">Drop PNG / BMP / JPG / WEBP</p>
+                    </div>
+                    <div id="glovePreviewContainerRight" class="glove-preview-container hidden">
+                      <img id="glovePreviewImgRight" class="glove-dropzone-preview" alt="Right Glove Preview">
+                      <button type="button" id="gloveClearRightBtn" class="glove-clear-btn" title="Remove Right Image">&times;</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Controls Row: Mirror & Team Scope -->
+              <div class="glove-controls-row" style="margin-top: 12px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.88rem; font-weight: 600;">
+                  <input type="checkbox" id="gloveMirrorCheck">
+                  <span><svg class="glyph glyph-xs"><use href="#glyph-mirror"></use></svg> Auto-Mirror Left Hand to Right Hand (Symmetrical)</span>
+                </label>
+
+                <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
+                  <label for="gloveTeamScopeSelect" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Target Team:</label>
+                  <select id="gloveTeamScopeSelect" class="styled-select" style="min-width: 150px; padding: 4px 10px;">
+                    <option value="all">All Teams (CT & T)</option>
+                    <option value="ct">CT Loadout Only</option>
+                    <option value="t">T Loadout Only</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Scope selection accordion/toggle -->
+              <div class="form-group" style="margin-top: 12px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                  <label style="font-weight: 600; font-size: 0.88rem;">Weapons Scope:</label>
+                  <button type="button" id="gloveToggleCustomScopeBtn" class="btn btn-sm btn-secondary">
+                    <svg class="glyph glyph-xs"><use href="#glyph-settings"></use></svg>
+                    <span>Choose Specific Weapons (Default: All Models)</span>
+                  </button>
+                </div>
+                <div id="gloveCustomScopeSection" class="glove-custom-scope-section hidden">
+                  <div class="target-weapons-actions">
+                    <button type="button" id="gloveScopeSelectAllBtn" class="btn btn-sm btn-secondary">Select All</button>
+                    <button type="button" id="gloveScopeClearBtn" class="btn btn-sm btn-secondary">Clear</button>
+                  </div>
+                  <div class="weapons-checklist" id="gloveBatchWeaponsList">
+                    <!-- Populated dynamically -->
+                  </div>
+                </div>
+              </div>
+
+              <button type="button" id="gloveBatchInjectBtn" class="btn-inject" style="width: 100%; margin-top: 8px; height: 34px;" title="Inject glove textures into all loadout weapons">
+                <svg class="glyph glyph-xs"><use href="#glyph-glove"></use></svg>
+                <span>INJECT GLOVES TO LOADOUT (1-CLICK)</span>
+              </button>
+
+              <!-- Presets Library Section -->
+              <div class="glove-presets-card" style="margin-top: 16px; padding: 12px; background: #080d1a; border: 1px solid var(--border); border-radius: var(--radius);">
+                <div class="glove-card-header" style="margin-bottom: 8px;">
+                  <span class="card-title" style="font-size: 0.9rem; font-weight: 700;">
+                    <svg class="glyph glyph-sm"><use href="#glyph-glove"></use></svg> Glove Preset Library
+                  </span>
+                  <span id="glovePresetsCountBadge" class="card-meta">0 Presets</span>
+                </div>
+                <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                  <input type="text" id="glovePresetNameInput" class="styled-input" placeholder="Save as preset (e.g. Sport Vice)" style="flex: 1;">
+                  <button type="button" id="glovePresetSaveBtn" class="btn btn-secondary" style="white-space: nowrap;">
+                    <svg class="glyph glyph-xs"><use href="#glyph-save"></use></svg> Save Preset
+                  </button>
+                </div>
+                <div id="glovePresetsContainer" class="glove-presets-container" style="max-height: 140px; overflow-y: auto;">
+                  <div style="text-align: center; color: var(--text-muted); padding: 8px; font-size: 0.8rem;">No saved glove presets yet.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mode B: Transfer from Weapon -->
+            <div id="gloveModeTransferSection" class="glove-submode hidden">
+              <div class="form-group" style="margin-top: 12px;">
+                <label for="gloveSourceSelect">Source Weapon with Preferred Gloves:</label>
+                <select id="gloveSourceSelect" class="styled-select">
+                  <!-- Populated dynamically -->
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Target Weapons to Update:</label>
+                <div class="target-weapons-actions">
+                  <button type="button" id="gloveSelectAllBtn" class="btn btn-sm btn-secondary">Select All Weapons</button>
+                  <button type="button" id="gloveClearBtn" class="btn btn-sm btn-secondary">Clear</button>
+                </div>
+                <div class="weapons-checklist" id="gloveWeaponsList">
+                  <!-- Populated dynamically -->
+                </div>
+              </div>
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" id="gloveSyncSleeves" checked> Also synchronize sleeve/arm textures
+                </label>
+              </div>
+              <button type="button" id="gloveTransferApplyBtn" class="btn btn-primary" style="margin-top: 10px; width: 100%;">
+                <svg class="glyph glyph-sm"><use href="#glyph-glove"></use></svg>
+                <span>Transfer Gloves to Selected Weapons</span>
+              </button>
+            </div>
+
+            <!-- Mode C: 3D Sleeve Transplant -->
+            <div id="gloveModeSleeveSection" class="glove-submode hidden">
+              <div class="sleeve-card" style="margin-top: 12px; padding: 14px; background: #080d1a; border: 1px solid var(--border); border-radius: var(--radius);">
+                <div class="sleeve-status-banner" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border-light);">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <svg class="glyph glyph-sm text-cyan"><use href="#glyph-gear-knife"></use></svg>
+                    <span style="font-weight: 700; font-size: 0.92rem;">Active Weapon Arm Rig</span>
+                  </div>
+                  <span id="sleeveTargetArmBadge" class="arm-type-badge badge-bare">Inspecting...</span>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                  <label for="sleevePresetSelect" style="font-weight: 600; font-size: 0.88rem;">Sleeve Donor Preset:</label>
+                  <select id="sleevePresetSelect" class="styled-select" style="width: 100%;">
+                    <option value="sas_navy">SAS Navy Blue (Seal Team 6 / UK SAS)</option>
+                    <option value="gign_urban">GIGN Urban Tactical (French GIGN)</option>
+                    <option value="gsg9_woodland">GSG-9 Woodland Camo (German GSG-9)</option>
+                    <option value="arctic_parka">Arctic Parka (Swedish Arctic Warfare)</option>
+                    <option value="custom">Custom Viewmodel Donor (.mdl)...</option>
+                  </select>
+                </div>
+
+                <div id="sleeveCustomDonorGroup" class="form-group hidden" style="margin-bottom: 12px;">
+                  <label for="sleeveCustomDonorInput" style="font-weight: 600; font-size: 0.88rem;">Custom Donor Model Path:</label>
+                  <input type="text" id="sleeveCustomDonorInput" class="styled-input" placeholder="e.g. cstrike/models/custom_skins/ct/v_m4a1.mdl" style="width: 100%;">
+                </div>
+
+                <div class="sleeve-scale-info" style="margin-bottom: 14px; padding: 10px; background: rgba(0, 229, 255, 0.05); border: 1px solid rgba(0, 229, 255, 0.2); border-radius: var(--radius-sm); font-size: 0.82rem;">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <span style="color: var(--text-muted);">Dynamic Rig Scale Ratio:</span>
+                    <strong id="sleeveScaleRatioBadge" class="scale-ratio-badge text-cyan">1.0x (Sync)</strong>
+                  </div>
+                  <div id="sleeveScaleRatioDesc" style="color: var(--text-secondary); font-size: 0.78rem;">GoldSrc 1.0x native geometry sync</div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 14px;">
+                  <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem;">
+                    <input type="checkbox" id="sleeveAutoBackupCheck" checked>
+                    <span>Auto-create .manset_arm.bak backup before transplant</span>
+                  </label>
+                </div>
+
+                <button type="button" id="sleeveTransplantBtn" class="btn btn-primary btn-large" style="width: 100%; font-size: 0.95rem;">
+                  <svg class="glyph glyph-sm"><use href="#glyph-sparkle"></use></svg>
+                  <span>Execute 3D Sleeve Transplant (1-Click)</span>
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Dock Pane 5: Finishes & Advanced FX (Specular Chrome, Wear Simulator, StatTrak LED) -->
+          <section id="tabFinishes" class="tab-pane">
+            <div class="dock-pane-header">
+              <div class="pane-title-cluster">
+                <span class="pulse-pip-cyan"></span>
+                <span class="dock-pane-title">FINISHES &amp; ADVANCED FX</span>
+                <span class="dock-count-badge">HARDWARE SUITE</span>
+              </div>
+              <div class="pane-telemetry-cluster">
+                <svg class="glyph glyph-xs text-purple"><use href="#glyph-sparkle"></use></svg>
+                <span class="telemetry-text">CHROME &bull; WEAR</span>
+              </div>
+            </div>
+
+            <!-- Segmented Pill Switcher -->
+            <div class="segmented-pill-switcher" id="finishesPillSwitcher">
+              <button type="button" class="pill-switch-btn active" data-subpane="chrome">
+                <svg class="glyph glyph-xs"><use href="#glyph-sparkle"></use></svg>
+                <span>Specular Chrome</span>
+              </button>
+              <button type="button" class="pill-switch-btn" data-subpane="wear">
+                <svg class="glyph glyph-xs"><use href="#glyph-tune"></use></svg>
+                <span>Procedural Wear</span>
+              </button>
+              <button type="button" class="pill-switch-btn" data-subpane="stattrak">
+                <svg class="glyph glyph-xs"><use href="#glyph-bolt"></use></svg>
+                <span>StatTrak LED</span>
+              </button>
+            </div>
+
+            <!-- Sub-pane 1: Metallic Specular Chrome Studio -->
+            <div id="subpaneChrome" class="finishes-subpane active">
+              <!-- Chrome Hero Card: 60FPS Orb + Preset Chips Grid -->
+              <div class="chrome-hero-card">
+                <div class="chrome-orb-box">
+                  <div class="chrome-orb-stage">
+                    <canvas id="chromeOrbCanvas" class="chrome-orb-canvas" width="120" height="120"></canvas>
+                    <div class="orb-fps-badge">
+                      <span class="orb-status-dot"></span>
+                      <span>60 FPS</span>
+                    </div>
+                  </div>
+                  <div class="orb-caption">Live Spherical Reflection</div>
+                </div>
+
+                <div class="chrome-presets-col">
+                  <div class="presets-header-row">
+                    <span class="presets-label">PRESET FINISHES</span>
+                    <span id="chromeActivePresetLabel" class="active-preset-chip">Silver</span>
+                  </div>
+                  <div class="chrome-preset-chips-grid">
+                    <button type="button" class="preset-chip-btn active" data-preset="silver" title="Pure polished silver metallic">
+                      <span class="preset-dot" style="--pc: #e2e8f0;"></span>
+                      <span>Silver</span>
+                    </button>
+                    <button type="button" class="preset-chip-btn" data-preset="gunmetal" title="Dark titanium gunmetal alloy">
+                      <span class="preset-dot" style="--pc: #64748b;"></span>
+                      <span>Gunmetal</span>
+                    </button>
+                    <button type="button" class="preset-chip-btn" data-preset="mirror" title="Ultra-reflective mirror shine">
+                      <span class="preset-dot" style="--pc: #ffffff;"></span>
+                      <span>Mirror</span>
+                    </button>
+                    <button type="button" class="preset-chip-btn" data-preset="24k gold" title="Warm 24K rich gold specular">
+                      <span class="preset-dot" style="--pc: #f59e0b;"></span>
+                      <span>24K Gold</span>
+                    </button>
+                    <button type="button" class="preset-chip-btn" data-preset="sapphire" title="Deep cobalt sapphire jewel sheen">
+                      <span class="preset-dot" style="--pc: #2563eb;"></span>
+                      <span>Sapphire</span>
+                    </button>
+                    <button type="button" class="preset-chip-btn" data-preset="ruby" title="Vibrant crimson ruby gemstone sheen">
+                      <span class="preset-dot" style="--pc: #ef4444;"></span>
+                      <span>Ruby</span>
+                    </button>
+                    <button type="button" class="preset-chip-btn" data-preset="emerald" title="Lush radiant emerald shine">
+                      <span class="preset-dot" style="--pc: #10b981;"></span>
+                      <span>Emerald</span>
+                    </button>
+                    <button type="button" class="preset-chip-btn" data-preset="blue gem" title="Radial chromatic Blue Gem refraction">
+                      <span class="preset-dot" style="--pc: #06b6d4;"></span>
+                      <span>Blue Gem</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Specular Parameters Sliders -->
+              <div class="form-group" style="margin-top: 12px;">
+                <div class="slider-header">
+                  <label for="chromeIntensitySlider">Specular Intensity:</label>
+                  <span id="chromeIntensityVal" class="slider-val">100%</span>
+                </div>
+                <input type="range" id="chromeIntensitySlider" min="20" max="250" step="5" value="100" class="slider">
+              </div>
+
+              <div class="form-group">
+                <div class="slider-header">
+                  <label for="chromeTightnessSlider">Highlight Falloff Curvature (Tightness):</label>
+                  <span id="chromeTightnessVal" class="slider-val">1.8</span>
+                </div>
+                <input type="range" id="chromeTightnessSlider" min="0.5" max="3.0" step="0.1" value="1.8" class="slider">
+              </div>
+
+              <div class="form-group">
+                <div class="slider-header">
+                  <label for="chromeTintSlider">Parametric Hue Tint Rotation:</label>
+                  <span id="chromeTintVal" class="slider-val">0&deg;</span>
+                </div>
+                <input type="range" id="chromeTintSlider" min="0" max="360" step="5" value="0" class="slider hue-spectrum-slider">
+              </div>
+
+              <!-- Selective Component Targeting -->
+              <div class="form-group" style="margin-top: 12px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                  <label style="font-weight: 600; font-size: 0.85rem;">Selective Component Targeting:</label>
+                  <div style="display: flex; gap: 4px;">
+                    <button type="button" id="chromeSelectAllPartsBtn" class="btn btn-xs btn-secondary">Select All</button>
+                    <button type="button" id="chromeClearPartsBtn" class="btn btn-xs btn-secondary">Clear</button>
+                  </div>
+                </div>
+                <div class="chrome-components-checklist" id="chromeComponentsList">
+                  <!-- Populated dynamically via JavaScript -->
+                </div>
+              </div>
+
+              <!-- Engine Safety Budget Gauge Card -->
+              <div class="chrome-budget-card" id="chromeBudgetCard" style="margin-top: 12px;">
+                <div class="budget-header-row">
+                  <div class="budget-title">
+                    <svg class="glyph glyph-xs"><use href="#glyph-shield"></use></svg>
+                    <span>ENGINE SAFETY BUDGET (IDST v10)</span>
+                  </div>
+                  <span id="chromeBudgetStatusTag" class="budget-status-tag safe">Safe</span>
+                </div>
+                <div class="budget-meter-wrap">
+                  <div class="budget-bar-labels">
+                    <span>Bodyparts Limit (Max 32)</span>
+                    <span id="chromeBodypartCountLabel">-- / 32 Used</span>
+                  </div>
+                  <div class="budget-track">
+                    <div id="chromeBodypartBudgetFill" class="budget-fill safe" style="width: 0%;"></div>
+                  </div>
+                </div>
+                <div class="budget-details-grid">
+                  <div class="budget-detail-item">
+                    <span class="budget-sublabel">Model Health</span>
+                    <span id="chromeHealthLabel" class="budget-subvalue">Checking...</span>
+                  </div>
+                  <div class="budget-detail-item">
+                    <span class="budget-sublabel">Submodel Vertices</span>
+                    <span id="chromeVertsBudgetLabel" class="budget-subvalue">-- / 2048</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="form-group" style="margin-top: 12px;">
+                <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600;">
+                  <input type="checkbox" id="chromeSyncPwCheck" checked>
+                  <span><svg class="glyph glyph-xs"><use href="#glyph-sync"></use></svg> Synchronize to Player (p_) and World (w_) drop models</span>
+                </label>
+              </div>
+
+              <div class="color-action-row" style="margin-top: 10px; display: flex; gap: 8px;">
+                <button type="button" id="chromeInjectBtn" class="btn-inject" style="flex: 2; height: 34px;">
+                  <svg class="glyph glyph-xs"><use href="#glyph-sparkle"></use></svg>
+                  <span>INJECT METALLIC CHROME</span>
+                </button>
+                <button type="button" id="chromeRemoveBtn" class="btn-revert" style="flex: 1; height: 34px; justify-content: center;" title="Strip chrome overlay and revert model to clean matte">
+                  <svg class="glyph glyph-xs"><use href="#glyph-restore"></use></svg>
+                  <span>Revert Matte</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Sub-pane 2: Procedural Wear & Float Simulator -->
+            <div id="subpaneWear" class="finishes-subpane">
+              <div class="pro-tool-card" style="margin-top: 4px;">
+                <h4 style="color: var(--accent-gold); margin-bottom: 6px; font-size: 0.95rem;">
+                  <svg class="glyph glyph-sm"><use href="#glyph-tune"></use></svg> Procedural Wear &amp; Float Simulator
+                </h4>
+                <p class="section-desc">Simulate edge paint chipping, alloy abrasion, and patina darkening.</p>
+                <div class="form-group">
+                  <label for="wearTargetSkin">Target Skin Texture:</label>
+                  <select id="wearTargetSkin" class="styled-select">
+                    <!-- Populated dynamically -->
+                  </select>
+                </div>
+                <div class="form-group">
+                  <div class="slider-header">
+                    <label for="wearFloatSlider">Wear Float: <strong id="wearFloatVal">0.350</strong></label>
+                    <span id="wearTierBadge" class="role-badge" style="background-color: #8b5cf6;">Field-Tested (FT)</span>
+                  </div>
+                  <input type="range" id="wearFloatSlider" min="0.0" max="1.0" step="0.01" value="0.35" class="slider">
+                </div>
+                <button type="button" id="wearApplyBtn" class="btn-inject" style="margin-top: 8px; width: 100%; height: 34px;">
+                  <svg class="glyph glyph-xs"><use href="#glyph-tune"></use></svg>
+                  <span>APPLY PROCEDURAL WEAR</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Sub-pane 3: StatTrak Digital LED Customizer -->
+            <div id="subpaneStatTrak" class="finishes-subpane">
+              <div class="pro-tool-card" style="margin-top: 4px;">
+                <h4 style="color: var(--accent-gold); margin-bottom: 6px; font-size: 0.95rem;">
+                  <svg class="glyph glyph-sm"><use href="#glyph-bolt"></use></svg> StatTrak Digital LED Customizer
+                </h4>
+                <p class="section-desc">Customize the glow color and kill count of the digital LED counter module.</p>
+
+                <!-- Target StatTrak Texture Dropdown (Auto-picks digit texture) -->
+                <div class="form-group" id="stTargetTextureGroup">
+                  <label for="stTargetTextureSelect">Target StatTrak Texture:</label>
+                  <select id="stTargetTextureSelect" class="styled-select">
+                    <!-- Populated dynamically -->
+                  </select>
+                </div>
+
+                <!-- Live LED Glow Visual Preview Pill -->
+                <div class="form-group" style="margin-bottom: 14px;">
+                  <label>Live LED Display Preview:</label>
+                  <div id="stLiveLedPreview" class="stattrak-led-preview-pill" data-color="orange">
+                    <div class="st-led-casing">
+                      <span class="st-led-label">StatTrak&trade;</span>
+                      <span class="st-preview-digits" id="stPreviewDigits">000000</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label>LED Digit Glow Color:</label>
+                  <div class="color-palette-buttons" id="stColorButtons">
+                    <button type="button" class="color-opt-btn active" data-color="orange" style="--c: #ff7800;">Classic Orange</button>
+                    <button type="button" class="color-opt-btn" data-color="cyan" style="--c: #00f0ff;">Neon Cyan</button>
+                    <button type="button" class="color-opt-btn" data-color="red" style="--c: #ff253a;">Ruby Red</button>
+                    <button type="button" class="color-opt-btn" data-color="green" style="--c: #19ff6e;">Emerald Green</button>
+                    <button type="button" class="color-opt-btn" data-color="violet" style="--c: #c33cff;">Cyber Violet</button>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="stNumberInput">Kill Counter Number (Optional):</label>
+                  <input type="text" id="stNumberInput" class="styled-input" placeholder="e.g. 001337 (leave empty to keep existing digits)">
+                </div>
+                <div class="btn-group-row" style="display: flex; gap: 8px; margin-top: 10px;">
+                  <button type="button" id="stApplyBtn" class="btn-inject" style="flex: 2; height: 34px;">
+                    <svg class="glyph glyph-xs"><use href="#glyph-bolt"></use></svg>
+                    <span>APPLY LED CUSTOMIZATION</span>
+                  </button>
+                  <button type="button" id="stResetBtn" class="btn-revert" style="flex: 1; height: 34px; justify-content: center;" title="Reset StatTrak LED to clean original backup">
+                    <svg class="glyph glyph-xs"><use href="#glyph-restore"></use></svg>
+                    <span>Reset</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Hidden fallback tabs for JS compatibility -->
+          <section id="tabPro" class="tab-pane hidden"></section>
+
+          <!-- Hidden fallback tabs for JS compatibility -->
+          <section id="tabViewport3d" class="tab-pane hidden"></section>
+          <section id="tabLibrary" class="tab-pane hidden"></section>
+        </div>
+
+        <!-- Dock Footer: Status & Quick Save -->
+        <footer class="studio-dock-footer" id="studioDockFooter">
+          <div class="dock-footer-telemetry">
+            <span class="pulse-dot-green"></span>
+            <span class="dock-cache-info">Engine Buffer: <strong id="dockEngineBuffer">100% Clean</strong></span>
+          </div>
+          <div class="dock-footer-actions">
+            <button type="button" class="studio-btn btn-xs" id="dockQuickSaveBtn" title="Save current loadout snapshot">
+              <svg class="glyph glyph-xs"><use href="#glyph-save"></use></svg>
+              <span>Quick Save</span>
+            </button>
+          </div>
+        </footer>
+      </aside>
+
+      <!-- Floating Quick Jump Rail (Right Edge Slide-Out) -->
+      <aside class="floating-quick-jump-rail" id="floatingQuickJumpRail" aria-label="Quick Jump Navigation">
+        <div class="quick-jump-dock-card">
+          <button type="button" class="quick-jump-handle" id="quickJumpHandle" aria-label="Toggle Quick Jump Navigation">
+            <svg class="glyph glyph-xs quick-jump-chevron"><use href="#glyph-sidebar-right"></use></svg>
+            <span class="quick-jump-pill-bar"></span>
+            <span class="quick-jump-tag">DOCK</span>
+          </button>
+          <div class="quick-jump-drawer">
+            <div class="quick-jump-header">
+              <div class="flex items-center gap-1.5 font-bold">
+                <svg class="glyph glyph-xs text-cyan"><use href="#glyph-target"></use></svg>
+                <span>Quick Jump</span>
+              </div>
+              <span class="badge-nav-dock">NAV</span>
+            </div>
+            <nav class="quick-jump-nav-list" id="quickJumpNavList">
+              <button type="button" class="quick-jump-btn active" data-target="slots">
+                <div class="flex items-center gap-2">
+                  <svg class="glyph glyph-xs text-cyan"><use href="#glyph-target"></use></svg>
+                  <span>Slots &amp; Assets</span>
+                </div>
+                <span class="pulse-dot-cyan"></span>
+              </button>
+              <button type="button" class="quick-jump-btn" data-target="bake">
+                <div class="flex items-center gap-2">
+                  <svg class="glyph glyph-xs text-amber"><use href="#glyph-canvas"></use></svg>
+                  <span>Bake Canvas</span>
+                </div>
+              </button>
+              <button type="button" class="quick-jump-btn" data-target="color">
+                <div class="flex items-center gap-2">
+                  <svg class="glyph glyph-xs text-emerald"><use href="#glyph-palette"></use></svg>
+                  <span>Color Lab</span>
+                </div>
+              </button>
+              <button type="button" class="quick-jump-btn" data-target="finishes">
+                <div class="flex items-center gap-2">
+                  <svg class="glyph glyph-xs text-purple"><use href="#glyph-sparkle"></use></svg>
+                  <span>Finishes &amp; FX</span>
+                </div>
+              </button>
+              <button type="button" class="quick-jump-btn" data-target="gloves">
+                <div class="flex items-center gap-2">
+                  <svg class="glyph glyph-xs text-rose"><use href="#glyph-glove"></use></svg>
+                  <span>Gloves</span>
+                </div>
+              </button>
+            </nav>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Modal 1: Slot Sticker Scale & Fine-Tuner -->
+    <div id="slotTuneModal" class="modal-overlay hidden">
+      <div class="modal-card wide">
+        <div class="modal-header">
+          <h3 id="slotTuneModalTitle">Sticker Slot Fine-Tuner</h3>
+          <button type="button" id="slotTuneModalCloseBtn" class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body slot-tune-layout">
+          <div class="slot-tune-controls">
+            <p class="section-desc" id="slotTuneDesc">Fine-tune scale, offset, and rotation inside the slot's native resolution.</p>
+
+            <div class="form-group">
+              <label>Choose Sticker Source:</label>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" id="slotTunePickLibBtn" class="btn btn-secondary" style="flex: 1;">
+                  <span class="icon"><svg class="glyph glyph-sm"><use href="#glyph-sparkle"></use></svg></span> Browse Library
+                </button>
+                <button type="button" id="slotTuneUploadBtn" class="btn btn-secondary" style="flex: 1;">
+                  <span class="icon"><svg class="glyph glyph-sm"><use href="#glyph-folder"></use></svg></span> Upload PNG
+                </button>
+                <input type="file" id="slotTuneFileInput" accept="image/*" style="display: none;">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <div class="slider-header">
+                <label for="slotTuneScale">Scale Multiplier:</label>
+                <span id="slotTuneScaleVal" class="slider-val">1.00x</span>
+              </div>
+              <input type="range" id="slotTuneScale" min="0.4" max="1.6" step="0.05" value="1.0" class="slider">
+            </div>
+
+            <div class="form-row">
+              <div class="form-group half">
+                <div class="slider-header">
+                  <label for="slotTuneOffsetX">Offset X:</label>
+                  <span id="slotTuneOffsetXVal" class="slider-val">0px</span>
+                </div>
+                <input type="range" id="slotTuneOffsetX" min="-120" max="120" step="1" value="0" class="slider">
+              </div>
+              <div class="form-group half">
+                <div class="slider-header">
+                  <label for="slotTuneOffsetY">Offset Y:</label>
+                  <span id="slotTuneOffsetYVal" class="slider-val">0px</span>
+                </div>
+                <input type="range" id="slotTuneOffsetY" min="-120" max="120" step="1" value="0" class="slider">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <div class="slider-header">
+                <label for="slotTuneRotation">Rotation:</label>
+                <span id="slotTuneRotationVal" class="slider-val">0°</span>
+              </div>
+              <input type="range" id="slotTuneRotation" min="0" max="360" step="5" value="0" class="slider">
+            </div>
+
+            <div class="form-group">
+              <div class="slider-header">
+                <label for="slotTuneScrape">Sticker Scrape / Wear: <span id="slotTuneScrapeVal" class="slider-val">0% (Mint)</span></label>
+              </div>
+              <input type="range" id="slotTuneScrape" min="0" max="100" step="5" value="0" class="slider">
+            </div>
+
+            <div class="form-group">
+              <label>Fit Mode:</label>
+              <div class="team-toggle" style="margin: 0;">
+                <button type="button" class="team-btn mode-btn active" id="slotTuneModeFit">Smart Fit</button>
+                <button type="button" class="team-btn mode-btn" id="slotTuneModeStretch">Stretch</button>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 16px;">
+              <button type="button" id="slotTuneApplyBtn" class="btn btn-primary btn-large" style="flex: 2;">
+                <svg class="glyph glyph-sm"><use href="#glyph-bolt"></use></svg> Inject into Slot
+              </button>
+              <button type="button" id="slotTuneResetBtn" class="btn btn-secondary btn-large" style="flex: 1;">
+                Reset
+              </button>
+            </div>
+          </div>
+
+          <div class="slot-tune-stage-card">
+            <div class="canvas-header">
+              <span>Native Slot Canvas Preview</span>
+              <span id="slotTuneResBadge" class="card-meta">176x161 px</span>
+            </div>
+            <div class="checkerboard slot-stage-box">
+              <canvas id="slotTuneCanvas" class="slot-tune-canvas"></canvas>
+            </div>
+            <p class="canvas-hint" style="text-align: center; margin-top: 8px;">Index 255 Pinning & Matte Defringing active (No black halos in-game).</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 2: Pro Tools Modal Compatibility Fallback -->
+    <div id="proToolsModal" class="modal-overlay hidden" style="display: none;">
+      <button type="button" id="proToolsModalCloseBtn" class="modal-close-btn">&times;</button>
+    </div>
+
+    <!-- Modal 3: Quick Asset Picker Modal -->
+    <div id="libraryModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 id="modalTitle">Select from Asset Library</h3>
+          <button type="button" id="modalCloseBtn" class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <!-- Contextual Tabs for Picker -->
+          <div class="modal-tabs drawer-pills" id="modalLibraryTabs" style="display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap;">
+            <button type="button" class="filter-pill active" data-picker-tab="stickers">Stickers & Decals</button>
+            <button type="button" class="filter-pill" data-picker-tab="skins">Weapon Skins</button>
+            <button type="button" class="filter-pill" data-picker-tab="gloves">Gloves & Arms</button>
+          </div>
+
+          <!-- Search & Bilateral Sync Controls -->
+          <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px;">
+            <input type="text" id="modalLibrarySearch" class="styled-input" placeholder="Search assets..." style="flex: 1; padding: 6px 10px; font-size: 0.85rem;">
+            <label id="modalGloveBilateralWrap" class="checkbox-label" style="display: none; align-items: center; gap: 6px; font-size: 0.8rem; white-space: nowrap; cursor: pointer; user-select: none;">
+              <input type="checkbox" id="modalGloveBilateralCheck" checked>
+              <span>Sync Both Hands (L+R)</span>
+            </label>
+          </div>
+
+          <div class="library-grid modal-grid" id="modalLibraryGrid">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 4: Save Profile Modal -->
+    <div id="profileModal" class="modal-overlay hidden">
+      <div class="modal-card mini">
+        <div class="modal-header">
+          <h3>Save Current Loadout Profile</h3>
+          <button type="button" id="profileModalCloseBtn" class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="profileNameInput">Profile Name:</label>
+            <input type="text" id="profileNameInput" class="styled-input" placeholder="e.g. Katowice 2014 Holo Theme">
+          </div>
+          <div class="form-group">
+            <label for="profileDescInput">Description (Optional):</label>
+            <input type="text" id="profileDescInput" class="styled-input" placeholder="Full set of tournament stickers on CT weapons">
+          </div>
+          <button type="button" id="profileSaveConfirmBtn" class="btn btn-primary" style="width: 100%; margin-top: 10px;">
+            Save Profile Snapshot
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 5: Quick Weapon Switcher (Ctrl+K or /) -->
+    <div id="quickSwitcherModal" class="modal-overlay hidden">
+      <div class="modal-card quick-switcher-card">
+        <div class="quick-switcher-header">
+          <span class="icon"><svg class="glyph glyph-sm"><use href="#glyph-search"></use></svg></span>
+          <input type="text" id="quickSwitcherInput" class="quick-switcher-input" placeholder="Type weapon name (e.g. ak47, deagle, awp, usp)..." autocomplete="off">
+          <kbd class="kbd-hint">ESC to close</kbd>
+        </div>
+        <div class="quick-switcher-results" id="quickSwitcherResults">
+          <!-- Weapon items populated dynamically -->
+        </div>
+        <div class="quick-switcher-footer">
+          <span>Navigate with <kbd class="kbd-hint">Up</kbd> <kbd class="kbd-hint">Down</kbd></span>
+          <span>Select with <kbd class="kbd-hint">Enter</kbd></span>
+          <span>Switch team with <kbd class="kbd-hint">Tab</kbd></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 6: Export Mod Pack -->
+    <div id="exportModpackModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3><svg class="glyph glyph-md"><use href="#glyph-box"></use></svg> Export CS 1.6 Custom Mod Pack</h3>
+          <button type="button" id="exportModalCloseBtn" class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="section-desc">Bundles your customized weapon skins, stickers, StatTrak LED modules, and gloves into an installation-ready ZIP file.</p>
+          <div class="form-group">
+            <label for="exportPackName">Mod Pack Archive Name:</label>
+            <input type="text" id="exportPackName" class="styled-input" value="CS16_Custom_ModPack">
+          </div>
+          <div class="form-group">
+            <label>Team Scope:</label>
+            <div class="team-toggle" style="margin: 0;">
+              <button type="button" class="team-btn active" id="exportTeamAll">All Teams (CT + T)</button>
+              <button type="button" class="team-btn" id="exportTeamCT">CT Only</button>
+              <button type="button" class="team-btn" id="exportTeamT">T Only</button>
+            </div>
+          </div>
+          <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem;">
+              <input type="checkbox" id="exportOnlyModified" checked>
+              <span>Include only modified weapons (models with original backups)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem;">
+              <input type="checkbox" id="exportIncludeAmxx" checked>
+              <span>Include AMXX Configs (skin_inventory.ini & active_loadout.ini)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem;">
+              <input type="checkbox" id="exportIncludePw" checked>
+              <span>Include Player & World Models (pw_models/)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem;">
+              <input type="checkbox" id="exportIncludeSounds" checked>
+              <span>Include CS:GO Custom SFX Audio (sound/weapons/csgo/)</span>
+            </label>
+          </div>
+          <div id="exportStatusArea" class="export-status-box hidden">
+            <!-- Progress / Download Button -->
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 16px;">
+            <button type="button" id="exportConfirmBtn" class="btn btn-primary btn-large" style="flex: 1;">
+              <svg class="glyph glyph-sm"><use href="#glyph-bolt"></use></svg>
+              <span>Generate & Download ZIP Mod Pack</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 7: Custom Sticker Upload & Edit Modal -->
+    <div id="stickerEditModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 id="stickerEditModalTitle"><svg class="glyph glyph-md"><use href="#glyph-sparkle"></use></svg> Custom Sticker Details</h3>
+          <button type="button" id="stickerEditModalCloseBtn" class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="stickerEditFilename">
+          <div class="form-group">
+            <label for="stickerEditNameInput">Display Name:</label>
+            <input type="text" id="stickerEditNameInput" class="styled-input" placeholder="e.g. Howl Contraband Holo">
+          </div>
+          <div class="form-group">
+            <label for="stickerEditCatInput">Category:</label>
+            <input type="text" id="stickerEditCatInput" class="styled-input" placeholder="e.g. Custom / User">
+          </div>
+          <div class="form-group" id="stickerUploadAlphaRow" style="display: none;">
+            <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem;">
+              <input type="checkbox" id="stickerUploadAutoAlpha">
+              <span>Auto-Remove Black / White Background (Transparent Cutout)</span>
+            </label>
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 16px;">
+            <button type="button" id="stickerEditSaveBtn" class="btn btn-primary" style="flex: 1;">Save Sticker</button>
+            <button type="button" id="stickerEditCancelBtn" class="btn btn-secondary">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 8: Custom Skin Registration & Edit Modal -->
+    <div id="skinEditModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 id="skinEditModalTitle"><svg class="glyph glyph-md"><use href="#glyph-palette"></use></svg> Register Skin to Library</h3>
+          <button type="button" id="skinEditModalCloseBtn" class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="skinEditFilename">
+          
+          <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+            <div class="form-group" style="flex: 1;">
+              <label for="skinEditCategorySelect">Weapon Category:</label>
+              <select id="skinEditCategorySelect" class="styled-select" style="width: 100%;">
+                <option value="pistols">Pistols</option>
+                <option value="rifles">Rifles & Snipers</option>
+                <option value="smgs">SMGs</option>
+                <option value="heavy">Heavy</option>
+                <option value="knives">Knives</option>
+                <option value="gloves">Gloves & Arms</option>
+              </select>
+            </div>
+            <div class="form-group" style="flex: 1.2;">
+              <label for="skinEditWeaponSelect">Target Weapon / Item:</label>
+              <select id="skinEditWeaponSelect" class="styled-select" style="width: 100%;">
+                <!-- Populated dynamically based on category -->
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="skinEditNameInput">Skin Name:</label>
+            <input type="text" id="skinEditNameInput" class="styled-input" placeholder="e.g. Cyrex, Asiimov, Dragon Lore, Printstream">
+          </div>
+
+          <div class="form-group">
+            <label style="font-size: 0.8rem; color: var(--text-dim);">Standardized Library Filename Preview:</label>
+            <div id="skinEditFilenamePreview" style="font-family: monospace; font-size: 0.82rem; color: var(--accent-cyan); background: rgba(0,0,0,0.25); padding: 6px 10px; border-radius: 4px; border: 1px solid var(--border-subtle);">
+              usp_cyrex.png
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 16px;">
+            <button type="button" id="skinEditSaveBtn" class="btn btn-primary" style="flex: 1;">Register & Save Skin</button>
+            <button type="button" id="skinEditCancelBtn" class="btn btn-secondary">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 9: Apply Gloves Destination & Hand Option Modal -->
+    <div id="applyGlovesModal" class="modal-overlay hidden">
+      <div class="modal-card" style="max-width: 580px;">
+        <div class="modal-header">
+          <h3 id="applyGlovesTitle"><svg class="glyph glyph-md"><use href="#glyph-glove"></use></svg> Apply Glove Asset</h3>
+          <button type="button" id="applyGlovesCloseBtn" class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <!-- Selected Glove Preview Banner -->
+          <div class="glove-apply-banner" style="display: flex; gap: 14px; align-items: center; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+            <div style="width: 64px; height: 64px; border-radius: 6px; overflow: hidden; background: #000; border: 1px solid var(--border-light); flex-shrink: 0;">
+              <img id="applyGloveThumb" src="" alt="Glove" style="width: 100%; height: 100%; object-fit: contain;">
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <span class="role-badge glove">GLOVE SKIN</span>
+                <span id="applyGloveCategory" style="font-size: 0.75rem; color: var(--text-dim);">Sport Gloves</span>
+              </div>
+              <h4 id="applyGloveName" style="margin: 0; font-size: 1.05rem; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Pandora</h4>
+              <span id="applyGloveMeta" style="font-size: 0.75rem; color: var(--text-muted);">Ready to apply</span>
+            </div>
+          </div>
+
+          <!-- Prompt Question & Mode Options -->
+          <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 12px;">Choose where and how you want to apply this glove texture:</p>
+
+          <!-- Option 1: Active Weapon Model -->
+          <div class="glove-choice-card" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <svg class="glyph glyph-sm" style="color: var(--accent-gold);"><use href="#glyph-weapon"></use></svg>
+                <strong style="font-size: 0.92rem;">Active Model: <span id="applyGloveActiveWepLabel" style="color: var(--accent-gold);">v_usp.mdl</span></strong>
+              </div>
+              <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">Current Viewport</span>
+            </div>
+
+            <!-- Target Glove Hand Slots Selection -->
+            <div id="applyGloveSlotsContainer" style="margin-bottom: 10px;">
+              <div style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 6px;">Target Glove Textures:</div>
+              <div id="applyGloveSlotsList" style="display: flex; flex-direction: column; gap: 6px;">
+                <!-- Populated dynamically with checkboxes: e.g. sport_left.bmp, sport_right.bmp -->
+              </div>
+            </div>
+
+            <!-- Auto-Mirror Toggle -->
+            <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.82rem; margin-bottom: 10px; color: var(--text-main);">
+              <input type="checkbox" id="applyGloveMirrorCheck" checked>
+              <span>Auto-mirror texture for Right Hand (Symmetrical Glove)</span>
+            </label>
+
+            <!-- Sleeve Safe Notice -->
+            <div id="applyGloveSleeveNotice" style="display: flex; align-items: center; gap: 8px; font-size: 0.78rem; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #93c5fd; padding: 7px 10px; border-radius: 6px; margin-bottom: 12px;">
+              <svg class="glyph glyph-xs" style="flex-shrink: 0;"><use href="#glyph-check"></use></svg>
+              <span><strong>Sleeve Protected:</strong> Sleeve textures (<code id="applyGloveSleeveNameList">sleeve.bmp</code>) are safe and will not be overwritten.</span>
+            </div>
+
+            <!-- Action Buttons for Option 1 -->
+            <div style="display: flex; gap: 8px;">
+              <button type="button" id="applyGlovePreviewActiveBtn" class="btn btn-secondary" style="flex: 1;">
+                <svg class="glyph glyph-xs"><use href="#glyph-inspect"></use></svg>
+                <span>Preview in 3D</span>
+              </button>
+              <button type="button" id="applyGloveCommitActiveBtn" class="btn btn-primary" style="flex: 1.2;">
+                <svg class="glyph glyph-xs"><use href="#glyph-bolt"></use></svg>
+                <span>Inject & Save to Active</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Option 2: Send to Batch Glove Injector -->
+          <div class="glove-choice-card" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <svg class="glyph glyph-sm" style="color: var(--accent-purple);"><use href="#glyph-glove"></use></svg>
+                <strong style="font-size: 0.92rem;">Open in Glove Batch Injector</strong>
+              </div>
+              <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: var(--accent-purple); border: 1px solid rgba(168, 85, 247, 0.3);">Pro Tools</span>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 10px;">
+              Pre-loads this glove texture into the Glove Studio dropzone so you can customize scopes and apply across your entire arsenal.
+            </p>
+            <button type="button" id="applyGloveSendToBatchBtn" class="btn btn-secondary" style="width: 100%;">
+              <svg class="glyph glyph-xs"><use href="#glyph-glove"></use></svg>
+              <span>Configure in Batch Glove Injector</span>
+            </button>
+          </div>
+
+          <!-- Option 3: 1-Click Batch Inject Entire Loadout -->
+          <div class="glove-choice-card" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <svg class="glyph glyph-sm" style="color: var(--accent-cyan);"><use href="#glyph-sparkle"></use></svg>
+                <strong style="font-size: 0.92rem;">1-Click Inject All Weapons</strong>
+              </div>
+              <span class="badge" style="background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); border: 1px solid rgba(6, 182, 212, 0.3);">All Models</span>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 10px;">
+              Immediately updates both CT & T weapons with this glove (preserving sleeves and custom viewmodel animations).
+            </p>
+            <button type="button" id="applyGloveBatchAllBtn" class="btn btn-warning" style="width: 100%;">
+              <svg class="glyph glyph-xs"><use href="#glyph-bolt"></use></svg>
+              <span>1-Click Inject Entire Weapon Collection</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Restore Scope Selection Modal -->
+    <div id="restoreScopeModal" class="modal-overlay hidden" style="z-index: 1050;">
+      <div class="modal-container" style="max-width: 520px; width: 90%;">
+        <div class="modal-header">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <svg class="glyph glyph-md" style="color: var(--danger);"><use href="#glyph-restore"></use></svg>
+            <h3 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Restore Weapon Models</h3>
+          </div>
+          <button type="button" class="btn-close modal-close-btn" id="closeRestoreModalBtn" aria-label="Close">
+            <svg class="glyph glyph-sm"><use href="#glyph-x"></use></svg>
+          </button>
+        </div>
+
+        <div class="modal-body" style="padding: 16px;">
+          <p style="font-size: 0.88rem; color: var(--text-dim); margin-bottom: 14px;">
+            Select which models to restore to their original state from backup for <strong id="restoreModalWeaponName" style="color: var(--text-bright);">Active Weapon</strong>.
+          </p>
+
+          <!-- Scope Options Grid -->
+          <div class="restore-scope-options" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
+            <!-- Option 1: All (Recommended) -->
+            <label class="restore-scope-card" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.02); cursor: pointer;">
+              <input type="radio" name="restoreScope" value="all" checked style="margin-top: 3px;">
+              <div style="flex: 1;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <strong style="font-size: 0.95rem; color: var(--text-bright);">Restore All Models (V + P + W)</strong>
+                  <span class="badge" style="background: rgba(34, 197, 94, 0.15); color: var(--accent-green); border: 1px solid rgba(34, 197, 94, 0.3); font-size: 0.72rem;">Recommended</span>
+                </div>
+                <p style="font-size: 0.78rem; color: var(--text-dim); margin: 4px 0 0;">
+                  Restores first-person viewmodel (<code>v_*.mdl</code>), third-person player model (<code>p_*.mdl</code>), and dropped world model (<code>w_*.mdl</code>).
+                </p>
+                <div id="restoreStatusAll" style="font-size: 0.75rem; color: var(--text-dim); margin-top: 6px;"></div>
+              </div>
+            </label>
+
+            <!-- Option 2: Viewmodel Only -->
+            <label class="restore-scope-card" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.02); cursor: pointer;">
+              <input type="radio" name="restoreScope" value="v" style="margin-top: 3px;">
+              <div style="flex: 1;">
+                <strong style="font-size: 0.95rem; color: var(--text-bright);">Viewmodel Only (v_*.mdl)</strong>
+                <p style="font-size: 0.78rem; color: var(--text-dim); margin: 4px 0 0;">
+                  Restores only the first-person weapon model held by your player. Third-person and world models remain unchanged.
+                </p>
+                <div id="restoreStatusV" style="font-size: 0.75rem; color: var(--text-dim); margin-top: 6px;"></div>
+              </div>
+            </label>
+
+            <!-- Option 3: Third-Person & World (P & W) Only -->
+            <label class="restore-scope-card" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.02); cursor: pointer;">
+              <input type="radio" name="restoreScope" value="pw" style="margin-top: 3px;">
+              <div style="flex: 1;">
+                <strong style="font-size: 0.95rem; color: var(--text-bright);">Player & World Only (p_*.mdl & w_*.mdl)</strong>
+                <p style="font-size: 0.78rem; color: var(--text-dim); margin: 4px 0 0;">
+                  Restores only the third-person weapon and ground dropped models. Keeps your customized first-person viewmodel skin untouched.
+                </p>
+                <div id="restoreStatusPW" style="font-size: 0.75rem; color: var(--text-dim); margin-top: 6px;"></div>
+              </div>
+            </label>
+          </div>
+
+          <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+            <button type="button" class="btn btn-secondary" id="cancelRestoreBtn">Cancel</button>
+            <button type="button" class="btn btn-danger" id="confirmRestoreBtn">
+              <svg class="glyph glyph-xs"><use href="#glyph-restore"></use></svg>
+              <span>Confirm Restore</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+  </div>
+
+  <!-- Component-based Modular Frontend Engine -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
