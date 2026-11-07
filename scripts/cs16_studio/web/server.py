@@ -69,6 +69,12 @@ from ..profile_manager import (
 )
 from ..stattrak_customizer import customize_stattrak_texture
 from ..wear_simulator import get_wear_condition_name, simulate_and_quantize
+from ..pw_restore import (
+    get_model_thumbnail,
+    list_model_backups,
+    restore_specific_backup,
+    migrate_loose_backups,
+)
 from ..modpack_exporter import export_modpack
 from ..slot_geometry import (
     inject_new_slot_quad,
@@ -333,6 +339,35 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                 "mode": "ACTIVE IN-GAME" if is_running else "STANDALONE DCC",
                 "goldsrc_version": "IDST v10",
             })
+            return
+
+        elif path == "/api/model/backups":
+            team = query.get("team", ["ct"])[0]
+            weapon = query.get("weapon", ["usp"])[0]
+            custom_path = query.get("path", [None])[0]
+            triplet_type = query.get("type", ["v"])[0].lower()
+
+            try:
+                if custom_path:
+                    mdl_path = Path(custom_path).resolve()
+                elif triplet_type in ("p", "w"):
+                    triplets = resolve_triplet_models(weapon, team=team, root_dir=self.workspace_root)
+                    target_mdl = triplets.get(triplet_type)
+                    if target_mdl and target_mdl.is_file():
+                        mdl_path = target_mdl
+                    else:
+                        mdl_path = resolve_model_path(weapon, team=team, root_dir=self.workspace_root)
+                else:
+                    mdl_path = resolve_model_path(weapon, team=team, root_dir=self.workspace_root)
+
+                result = list_model_backups(mdl_path)
+                result["team"] = team
+                result["weapon"] = weapon
+                result["triplet_type"] = triplet_type
+                result["success"] = True
+                self._send_json(result)
+            except Exception as e:
+                self._send_json({"success": False, "error": str(e)}, status=500)
             return
 
         elif path == "/api/model":
@@ -1039,7 +1074,38 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                     )
                 return
 
-            elif path == "/api/tools/clean_backups":
+            elif path in ("/api/tools/clean_backups", "/api/tools/migrate_backups"):
+                try:
+                    moved = migrate_loose_backups(root_dir=self.workspace_root)
+                    self._send_json({"success": True, "moved_count": len(moved), "moved": moved})
+                except Exception as e:
+                    self._send_json({"success": False, "error": str(e)}, status=500)
+                return
+
+            elif path == "/api/model/restore_backup":
+                weapon = req_data.get("weapon", "usp")
+                team = req_data.get("team", "ct")
+                custom_path = req_data.get("path")
+                backup_target = req_data.get("backup_target")
+
+                if not backup_target:
+                    self._send_json({"success": False, "error": "Missing 'backup_target' parameter."}, status=400)
+                    return
+
+                if custom_path:
+                    mdl_path = Path(custom_path).resolve()
+                else:
+                    mdl_path = resolve_model_path(weapon, team=team, root_dir=self.workspace_root)
+
+                try:
+                    success, msg = restore_specific_backup(mdl_path, backup_target=backup_target)
+                    if success:
+                        self._send_json({"success": True, "message": msg, "restored_from": str(backup_target)})
+                    else:
+                        self._send_json({"success": False, "error": msg}, status=400)
+                except Exception as e:
+                    self._send_json({"success": False, "error": str(e)}, status=500)
+                return
                 try:
                     moved = migrate_loose_backups(root_dir=self.workspace_root)
                     self._send_json({"success": True, "moved_count": len(moved), "moved": moved})

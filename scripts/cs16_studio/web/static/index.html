@@ -394,6 +394,10 @@
               </button>
 
               <div class="menu-divider"></div>
+              <button type="button" id="backupHubBtn" class="menu-item-btn" title="Inspect model backups, visual diffs & restore points">
+                <svg class="glyph glyph-xs text-cyan"><use href="#glyph-clock"></use></svg>
+                <span>Backups & Rollback Hub</span>
+              </button>
               <button type="button" id="restoreBtn" class="menu-item-btn danger-item" title="Restore model from .orig.mdl backup">
                 <svg class="glyph glyph-xs text-crimson"><use href="#glyph-restore"></use></svg>
                 <span>Restore Original (.orig.mdl)</span>
@@ -2815,6 +2819,13 @@
             </label>
           </div>
 
+          <div style="margin-bottom: 14px; text-align: center;">
+            <button type="button" id="openBackupHubFromScopeBtn" class="btn btn-secondary btn-sm" style="font-size: 0.78rem; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px;">
+              <svg class="glyph glyph-xs text-cyan"><use href="#glyph-clock"></use></svg>
+              <span>Explore Visual Backup & Rollback Hub (Diffs & Snapshots)</span>
+            </button>
+          </div>
+
           <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
             <button type="button" class="btn btn-secondary" id="cancelRestoreBtn">Cancel</button>
             <button type="button" class="btn btn-danger" id="confirmRestoreBtn">
@@ -2940,6 +2951,120 @@
             <button type="button" class="btn btn-primary" id="pwPromptSyncBtn">
               <svg class="glyph glyph-xs"><use href="#glyph-sync"></use></svg>
               <span>Sync P/W Models Now</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 11: Visual Backup & Rollback Hub Modal -->
+    <div id="backupHubModal" class="modal-overlay hidden" data-purpose="backup-hub">
+      <div class="modal-card backup-hub-card">
+        <div class="modal-header">
+          <div class="modal-header-cluster">
+            <svg class="glyph glyph-md text-cyan"><use href="#glyph-clock"></use></svg>
+            <div>
+              <h3 class="modal-title">Model Backup & Rollback Hub</h3>
+              <p class="modal-subtitle">Visual diff comparison, snapshot history & backup consolidation for <span id="backupHubModelTitle" class="font-mono text-cyan">v_weapon.mdl</span></p>
+            </div>
+          </div>
+          <button type="button" id="backupHubCloseBtn" class="modal-close-btn" title="Close">&times;</button>
+        </div>
+
+        <div class="modal-body backup-hub-body">
+          <!-- Visual Diff Row: Current Working Model vs Selected Restore Point -->
+          <div class="backup-diff-container">
+            <!-- Left: Current Model -->
+            <div class="backup-diff-card">
+              <div class="diff-card-header">
+                <span class="diff-badge current-badge">CURRENT ACTIVE MODEL</span>
+                <span id="backupHubCurrentName" class="diff-model-name">v_usp.mdl</span>
+              </div>
+              <div class="diff-preview-box">
+                <img id="backupHubCurrentThumb" class="backup-diff-img" src="" alt="Current Model Preview" />
+                <div id="backupHubCurrentThumbPlaceholder" class="thumb-placeholder hidden">No Preview</div>
+              </div>
+              <div class="diff-meta-grid">
+                <div class="diff-meta-item">
+                  <span class="meta-label">File Size</span>
+                  <span id="backupHubCurrentSize" class="meta-val font-mono">-- KB</span>
+                </div>
+                <div class="diff-meta-item">
+                  <span class="meta-label">Textures</span>
+                  <span id="backupHubCurrentTexCount" class="meta-val font-mono">--</span>
+                </div>
+                <div class="diff-meta-item">
+                  <span class="meta-label">Last Modified</span>
+                  <span id="backupHubCurrentDate" class="meta-val font-mono">--</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Diff Arrow Divider -->
+            <div class="diff-arrow-divider">
+              <div class="diff-arrow-circle">
+                <svg class="glyph glyph-sm text-cyan"><use href="#glyph-sync"></use></svg>
+              </div>
+              <span class="diff-arrow-sub">ROLLBACK</span>
+            </div>
+
+            <!-- Right: Selected Restore Point -->
+            <div class="backup-diff-card selected-restore-card">
+              <div class="diff-card-header">
+                <span id="backupHubSelectedBadge" class="diff-badge restore-badge">SELECTED RESTORE POINT</span>
+                <span id="backupHubSelectedName" class="diff-model-name">None Selected</span>
+              </div>
+              <div class="diff-preview-box">
+                <img id="backupHubSelectedThumb" class="backup-diff-img hidden" src="" alt="Backup Preview" />
+                <div id="backupHubSelectedThumbPlaceholder" class="thumb-placeholder">Select a backup below</div>
+              </div>
+              <div class="diff-meta-grid">
+                <div class="diff-meta-item">
+                  <span class="meta-label">File Size</span>
+                  <span id="backupHubSelectedSize" class="meta-val font-mono">-- KB</span>
+                </div>
+                <div class="diff-meta-item">
+                  <span class="meta-label">Textures</span>
+                  <span id="backupHubSelectedTexCount" class="meta-val font-mono">--</span>
+                </div>
+                <div class="diff-meta-item">
+                  <span class="meta-label">Backup Date</span>
+                  <span id="backupHubSelectedDate" class="meta-val font-mono">--</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Restore Points & Snapshots List Section -->
+          <div class="backup-list-section">
+            <div class="backup-list-header">
+              <div class="backup-list-title-wrap">
+                <svg class="glyph glyph-xs text-dim"><use href="#glyph-layers"></use></svg>
+                <span class="section-title">Available Restore Points</span>
+                <span id="backupHubCountBadge" class="layer-count-badge">0</span>
+              </div>
+              <button type="button" id="backupHubMigrateBtn" class="btn btn-secondary btn-sm" title="Move loose legacy .bak files into dedicated backup/ folder">
+                <svg class="glyph glyph-xs text-amber"><use href="#glyph-folder"></use></svg>
+                <span>Consolidate Loose Backups</span>
+              </button>
+            </div>
+
+            <!-- Backups List -->
+            <div id="backupHubList" class="backup-points-list">
+              <!-- Dynamically populated rows -->
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer backup-hub-footer">
+          <div class="footer-status-msg" id="backupHubStatusMsg">
+            Select a restore point to compare visual differences.
+          </div>
+          <div class="footer-actions">
+            <button type="button" class="btn btn-secondary" id="backupHubCancelBtn">Close</button>
+            <button type="button" class="btn btn-danger" id="backupHubRestoreBtn" disabled>
+              <svg class="glyph glyph-xs"><use href="#glyph-restore"></use></svg>
+              <span>Restore Selected Backup</span>
             </button>
           </div>
         </div>

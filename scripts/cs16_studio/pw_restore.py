@@ -5,11 +5,15 @@ Integrated with EmptyX Customization config_manager.
 GoldSrc StudioModel (IDST v10) compatible.
 """
 
+import base64
+import datetime
+import io
 import os
 from pathlib import Path
 import shutil
 import struct
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
+from PIL import Image
 
 from .config_manager import config
 
@@ -406,3 +410,201 @@ def migrate_loose_backups(
 
     return moved
 
+
+
+def get_model_thumbnail(model_path: Union[str, Path], max_dim: int = 128) -> Optional[str]:
+    """Generates a base64 PNG data URI thumbnail of the model's primary skin texture."""
+    try:
+        from .mdl_core import MdlModel
+        p = Path(model_path).resolve()
+        if not p.is_file():
+            return None
+        model = MdlModel(p)
+        skins = model.get_skins()
+        tex = max(skins, key=lambda t: t.width * t.height) if skins else (model.textures[0] if model.textures else None)
+        if not tex:
+            return None
+        img = tex.to_rgba_image()
+        img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        return f"data:image/png;base64,{base64.b64encode(buf.getvalue()).decode('ascii')}"
+    except Exception:
+        return None
+
+
+def list_model_backups(model_path: Union[str, Path]) -> Dict[str, Any]:
+    """
+    Returns complete metadata and thumbnails for all available restore points
+    (golden original, intermediate .bak, undo snapshots) for a model.
+    """
+    p = Path(model_path).resolve()
+    stem = p.stem
+    name = p.name
+
+    current_info = None
+    if p.is_file():
+        mtime = os.path.getmtime(p)
+        dt = datetime.datetime.fromtimestamp(mtime)
+        current_info = {
+            "name": name,
+            "path": str(p),
+            "size": p.stat().st_size,
+            "modified_at": dt.isoformat(),
+            "formatted_date": dt.strftime("%b %d, %Y %H:%M"),
+            "thumbnail": get_model_thumbnail(p, max_dim=128),
+        }
+
+    backups = []
+    seen_paths = set()
+
+    # Search in dedicated backup directories
+    for b_name in BACKUP_FOLDER_NAMES:
+        b_dir = p.parent / b_name
+        if not b_dir.is_dir():
+            continue
+
+        try:
+            candidates = list(b_dir.glob(f"{stem}*.mdl*")) + list(b_dir.glob(f"{name}*"))
+        except OSError:
+            continue
+
+        for cand in sorted(candidates, key=lambda f: f.stat().st_mtime, reverse=True):
+            cand_res = cand.resolve()
+            if cand_res in seen_paths or not cand_res.is_file():
+                continue
+            seen_paths.add(cand_res)
+
+            # Validate IDST header
+            is_valid = False
+            tex_count = 0
+            try:
+                with open(cand_res, "rb") as f:
+                    hdr = f.read(188)
+                    if len(hdr) >= 188:
+                        magic, ver = struct.unpack_from("<4sI", hdr, 0)
+                        if magic == STUDIO_MAGIC and ver == STUDIO_VERSION:
+                            is_valid = True
+                            tex_count, _ = struct.unpack_from("<II", hdr, 180)
+            except Exception:
+                pass
+
+            if not is_valid:
+                continue
+
+            mtime = cand_res.stat().st_mtime
+            dt = datetime.datetime.fromtimestamp(mtime)
+            c_name = cand_res.name
+
+            b_type = "orig" if ".orig" in c_name else "bak"
+            label = "Golden Original (.orig.mdl)" if b_type == "orig" else f"Backup ({c_name})"
+
+            backups.append({
+                "id": c_name,
+                "filename": c_name,
+                "path": str(cand_res),
+                "label": label,
+                "type": b_type,
+                "size": cand_res.stat().st_size,
+                "modified_at": dt.isoformat(),
+                "formatted_date": dt.strftime("%b %d, %Y %H:%M"),
+                "texture_count": tex_count,
+                "thumbnail": get_model_thumbnail(cand_res, max_dim=128),
+                "is_dedicated": True,
+            })
+
+    # Search legacy parent directory backups
+    for cand in (
+        p.with_suffix(".orig.mdl"),
+        Path(str(p) + ".bak"),
+        p.with_suffix(".bak"),
+        p.parent / f"{stem}.orig.bak",
+    ):
+        if cand.is_file() and cand.resolve() not in seen_paths:
+            cand_res = cand.resolve()
+            seen_paths.add(cand_res)
+            try:
+                with open(cand_res, "rb") as f:
+                    hdr = f.read(188)
+                    if len(hdr) >= 188:
+                        magic, ver = struct.unpack_from("<4sI", hdr, 0)
+                        if magic == STUDIO_MAGIC and ver == STUDIO_VERSION:
+                            tex_count, _ = struct.unpack_from("<II", hdr, 180)
+                            mtime = cand_res.stat().st_mtime
+                            dt = datetime.datetime.fromtimestamp(mtime)
+                            b_type = "orig" if ".orig" in cand_res.name else "bak"
+                            backups.append({
+                                "id": cand_res.name,
+                                "filename": cand_res.name,
+                                "path": str(cand_res),
+                                "label": f"Loose Legacy ({cand_res.name})",
+                                "type": b_type,
+                                "size": cand_res.stat().st_size,
+                                "modified_at": dt.isoformat(),
+                                "formatted_date": dt.strftime("%b %d, %Y %H:%M"),
+                                "texture_count": tex_count,
+                                "thumbnail": get_model_thumbnail(cand_res, max_dim=128),
+                                "is_dedicated": False,
+                            })
+            except Exception:
+                pass
+
+    return {
+        "model_name": name,
+        "model_path": str(p),
+        "current": current_info,
+        "backups": backups,
+        "total_backups": len(backups),
+    }
+
+
+def restore_specific_backup(
+    model_path: Union[str, Path],
+    backup_target: Union[str, Path],
+) -> Tuple[bool, str]:
+    """
+    Safely restores a model from a specific backup file or filename with atomic replacement.
+    """
+    p = Path(model_path).resolve()
+    b_path = Path(backup_target)
+    if not b_path.is_absolute():
+        cand1 = get_model_backup_dir(p) / b_path.name
+        cand2 = p.parent / b_path.name
+        if cand1.is_file():
+            b_path = cand1.resolve()
+        elif cand2.is_file():
+            b_path = cand2.resolve()
+        else:
+            return False, f"Backup file '{backup_target}' not found."
+    else:
+        b_path = b_path.resolve()
+
+    if not b_path.is_file():
+        return False, f"Backup file '{b_path}' does not exist."
+
+    try:
+        with open(b_path, "rb") as f:
+            data = f.read()
+    except Exception as e:
+        return False, f"Failed to read backup '{b_path.name}': {e}"
+
+    if len(data) < 188:
+        return False, f"Backup '{b_path.name}' is too small ({len(data)} bytes)."
+
+    magic, ver = struct.unpack_from("<4sI", data, 0)
+    if magic != STUDIO_MAGIC or ver != STUDIO_VERSION:
+        return False, f"Backup '{b_path.name}' is not a valid GoldSrc StudioModel IDST v10."
+
+    tmp_path = p.with_suffix(".tmp")
+    try:
+        with open(tmp_path, "wb") as f:
+            f.write(data)
+        os.replace(tmp_path, p)
+        return True, f"Successfully restored '{p.name}' from {b_path.name}."
+    except Exception as e:
+        if tmp_path.exists():
+            try:
+                tmp_path.unlink()
+            except OSError:
+                pass
+        return False, f"Failed to replace model with backup: {e}"
