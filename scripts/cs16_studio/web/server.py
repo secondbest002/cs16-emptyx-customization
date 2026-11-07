@@ -68,7 +68,11 @@ from ..profile_manager import (
     save_profile,
 )
 from ..stattrak_customizer import customize_stattrak_texture
-from ..wear_simulator import get_wear_condition_name, simulate_and_quantize
+from ..wear_simulator import (
+    apply_wear_simulation,
+    get_wear_condition_name,
+    simulate_and_quantize,
+)
 from ..pw_restore import (
     get_model_thumbnail,
     list_model_backups,
@@ -1728,6 +1732,7 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                         "success": True,
                         "message": f"Applied wear float {wear_float:.3f} ({tier_name}) to '{target_tex.name}'.",
                         "tier_name": tier_name,
+                        "texture_name": target_tex.name,
                         "saved_path": str(saved_path),
                         "preview": f"data:image/png;base64,{encoded}",
                     })
@@ -1737,6 +1742,56 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                     self._send_json({"success": False, "error": str(e)}, status=400)
                 except Exception as e:
                     self._send_json({"success": False, "error": f"Failed to apply wear: {str(e)}"}, status=400)
+                return
+
+            elif path == "/api/wear_preview":
+                try:
+                    weapon = req_data.get("weapon", "usp")
+                    team = req_data.get("team", "ct")
+                    custom_path = req_data.get("path")
+                    tex_idx = req_data.get("texture_index")
+                    wear_float = float(req_data.get("wear_float", 0.35))
+                    seed = int(req_data.get("seed", 1337))
+
+                    if custom_path:
+                        mdl_path = Path(custom_path).resolve()
+                    else:
+                        mdl_path = resolve_model_path(weapon, team=team, root_dir=self.workspace_root)
+
+                    model = MdlModel(mdl_path)
+                    if tex_idx is not None:
+                        target_tex = model.get_texture_by_index(int(tex_idx))
+                    else:
+                        skins = model.get_skins()
+                        target_tex = max(skins, key=lambda t: t.width * t.height) if skins else None
+
+                    if not target_tex:
+                        self._send_json({"success": False, "error": "Target skin texture not found."}, status=404)
+                        return
+
+                    tier_name = get_wear_condition_name(wear_float)
+                    worn_img = apply_wear_simulation(
+                        target_tex.to_rgba_image(),
+                        wear_float=wear_float,
+                        seed=seed,
+                    )
+
+                    buf = io.BytesIO()
+                    worn_img.save(buf, format="PNG")
+                    encoded = base64.b64encode(buf.getvalue()).decode("ascii")
+                    self._send_json({
+                        "success": True,
+                        "wear_float": wear_float,
+                        "tier_name": tier_name,
+                        "texture_name": target_tex.name,
+                        "preview": f"data:image/png;base64,{encoded}",
+                    })
+                except FileNotFoundError as e:
+                    self._send_json({"success": False, "error": str(e)}, status=404)
+                except ValueError as e:
+                    self._send_json({"success": False, "error": str(e)}, status=400)
+                except Exception as e:
+                    self._send_json({"success": False, "error": f"Failed to preview wear: {str(e)}"}, status=400)
                 return
 
             elif path == "/api/glove_transfer":

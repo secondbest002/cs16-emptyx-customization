@@ -101,6 +101,11 @@ const proEls = {
   get wearFloatSlider() { return document.getElementById("wearFloatSlider"); },
   get wearFloatVal() { return document.getElementById("wearFloatVal"); },
   get wearTierBadge() { return document.getElementById("wearTierBadge"); },
+  get wearTierChips() { return document.getElementById("wearTierChips"); },
+  get wearPreviewContainer() { return document.getElementById("wearPreviewContainer"); },
+  get wearPreviewImg() { return document.getElementById("wearPreviewImg"); },
+  get wearPreviewTier() { return document.getElementById("wearPreviewTier"); },
+  get wearPreviewBtn() { return document.getElementById("wearPreviewBtn"); },
   get wearApplyBtn() { return document.getElementById("wearApplyBtn"); },
 };
 
@@ -847,31 +852,87 @@ function setupProToolsEventListeners() {
     });
   }
 
-  // Wear Simulator Controls
+  // Helper to update wear tier UI
+  function updateWearTierDisplay(f) {
+    state.pro.wearFloat = f;
+    if (proEls.wearFloatVal) proEls.wearFloatVal.textContent = f.toFixed(3);
+    if (proEls.wearFloatSlider) proEls.wearFloatSlider.value = f.toFixed(3);
+
+    let tier = "Factory New (FN)";
+    let bg = "#10b981";
+    if (f >= 0.45) {
+      tier = "Battle-Scarred (BS)";
+      bg = "#ef4444";
+    } else if (f >= 0.38) {
+      tier = "Well-Worn (WW)";
+      bg = "#f59e0b";
+    } else if (f >= 0.15) {
+      tier = "Field-Tested (FT)";
+      bg = "#8b5cf6";
+    } else if (f >= 0.07) {
+      tier = "Minimal Wear (MW)";
+      bg = "#06b6d4";
+    }
+    if (proEls.wearTierBadge) {
+      proEls.wearTierBadge.textContent = tier;
+      proEls.wearTierBadge.style.backgroundColor = bg;
+    }
+
+    if (proEls.wearTierChips) {
+      proEls.wearTierChips.querySelectorAll(".wear-chip").forEach((chip) => {
+        const chipF = parseFloat(chip.dataset.float);
+        if (Math.abs(chipF - f) < 0.05) {
+          chip.classList.add("active");
+          chip.style.borderColor = "var(--accent-cyan)";
+        } else {
+          chip.classList.remove("active");
+          chip.style.borderColor = "";
+        }
+      });
+    }
+  }
+
+  // Wear Simulator Slider
   if (proEls.wearFloatSlider) {
     proEls.wearFloatSlider.addEventListener("input", (e) => {
       const f = parseFloat(e.target.value);
-      state.pro.wearFloat = f;
-      if (proEls.wearFloatVal) proEls.wearFloatVal.textContent = f.toFixed(3);
+      updateWearTierDisplay(f);
+    });
+  }
 
-      let tier = "Factory New (FN)";
-      let bg = "#10b981";
-      if (f >= 0.45) {
-        tier = "Battle-Scarred (BS)";
-        bg = "#ef4444";
-      } else if (f >= 0.38) {
-        tier = "Well-Worn (WW)";
-        bg = "#f59e0b";
-      } else if (f >= 0.15) {
-        tier = "Field-Tested (FT)";
-        bg = "#8b5cf6";
-      } else if (f >= 0.07) {
-        tier = "Minimal Wear (MW)";
-        bg = "#06b6d4";
-      }
-      if (proEls.wearTierBadge) {
-        proEls.wearTierBadge.textContent = tier;
-        proEls.wearTierBadge.style.backgroundColor = bg;
+  // Wear Quick Preset Chips
+  if (proEls.wearTierChips) {
+    proEls.wearTierChips.addEventListener("click", (e) => {
+      const btn = e.target.closest(".wear-chip");
+      if (!btn) return;
+      const f = parseFloat(btn.dataset.float);
+      updateWearTierDisplay(f);
+    });
+  }
+
+  // Wear Preview
+  if (proEls.wearPreviewBtn) {
+    proEls.wearPreviewBtn.addEventListener("click", async () => {
+      const skinIdx = proEls.wearTargetSkin ? proEls.wearTargetSkin.value : null;
+      showLoader("Simulating curvature wear...");
+      try {
+        const payload = {
+          team: state.currentTeam,
+          weapon: state.currentWeapon,
+          texture_index: skinIdx ? parseInt(skinIdx, 10) : undefined,
+          wear_float: state.pro.wearFloat,
+        };
+        const res = await apiPost("/api/wear_preview", payload);
+        if (res.preview) {
+          if (proEls.wearPreviewImg) proEls.wearPreviewImg.src = res.preview;
+          if (proEls.wearPreviewTier) proEls.wearPreviewTier.textContent = `${res.tier_name} (${res.wear_float.toFixed(3)})`;
+          if (proEls.wearPreviewContainer) proEls.wearPreviewContainer.style.display = "block";
+        }
+        showToast(`Previewed wear: ${res.tier_name}`, "info");
+      } catch (err) {
+        showToast(`Wear preview failed: ${err.message}`, "error");
+      } finally {
+        hideLoader();
       }
     });
   }

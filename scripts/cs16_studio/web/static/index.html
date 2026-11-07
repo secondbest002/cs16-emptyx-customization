@@ -2094,7 +2094,7 @@
                 <h4 style="color: var(--accent-gold); margin-bottom: 6px; font-size: 0.95rem;">
                   <svg class="glyph glyph-sm"><use href="#glyph-tune"></use></svg> Procedural Wear &amp; Float Simulator
                 </h4>
-                <p class="section-desc">Simulate edge paint chipping, alloy abrasion, and patina darkening.</p>
+                <p class="section-desc">Simulate curvature-aware edge chipping, bare alloy abrasion, and patina darkening.</p>
                 <div class="form-group">
                   <label for="wearTargetSkin">Target Skin Texture:</label>
                   <select id="wearTargetSkin" class="styled-select">
@@ -2106,12 +2106,42 @@
                     <label for="wearFloatSlider">Wear Float: <strong id="wearFloatVal">0.350</strong></label>
                     <span id="wearTierBadge" class="role-badge" style="background-color: #8b5cf6;">Field-Tested (FT)</span>
                   </div>
-                  <input type="range" id="wearFloatSlider" min="0.0" max="1.0" step="0.01" value="0.35" class="slider">
+                  <input type="range" id="wearFloatSlider" min="0.0" max="1.0" step="0.005" value="0.350" class="slider">
                 </div>
-                <button type="button" id="wearApplyBtn" class="btn-inject" style="margin-top: 8px; width: 100%; height: 34px;">
-                  <svg class="glyph glyph-xs"><use href="#glyph-tune"></use></svg>
-                  <span>APPLY PROCEDURAL WEAR</span>
-                </button>
+
+                <!-- Condition Quick Presets -->
+                <div class="form-group" style="margin-top: 8px;">
+                  <label style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px; display: block;">Quick Condition Presets:</label>
+                  <div style="display: flex; gap: 4px; flex-wrap: wrap;" id="wearTierChips">
+                    <button type="button" class="btn btn-xs btn-secondary wear-chip" data-float="0.02" data-tier="Factory New (FN)" data-bg="#10b981">FN 0.02</button>
+                    <button type="button" class="btn btn-xs btn-secondary wear-chip" data-float="0.10" data-tier="Minimal Wear (MW)" data-bg="#06b6d4">MW 0.10</button>
+                    <button type="button" class="btn btn-xs btn-secondary wear-chip active" data-float="0.25" data-tier="Field-Tested (FT)" data-bg="#8b5cf6">FT 0.25</button>
+                    <button type="button" class="btn btn-xs btn-secondary wear-chip" data-float="0.40" data-tier="Well-Worn (WW)" data-bg="#f59e0b">WW 0.40</button>
+                    <button type="button" class="btn btn-xs btn-secondary wear-chip" data-float="0.70" data-tier="Battle-Scarred (BS)" data-bg="#ef4444">BS 0.70</button>
+                  </div>
+                </div>
+
+                <!-- Live Preview Card -->
+                <div id="wearPreviewContainer" class="wear-preview-card" style="margin-top: 10px; display: none;">
+                  <div style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; display: flex; justify-content: space-between;">
+                    <span>Curvature Wear Preview</span>
+                    <span id="wearPreviewTier" style="color: var(--accent-cyan);">FT (0.25)</span>
+                  </div>
+                  <div style="width: 100%; height: 140px; background: #12151b; border: 1px solid var(--border-color); border-radius: 6px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                    <img id="wearPreviewImg" src="" alt="Wear Preview" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                  </div>
+                </div>
+
+                <div style="display: flex; gap: 6px; margin-top: 10px;">
+                  <button type="button" id="wearPreviewBtn" class="btn btn-secondary" style="flex: 1; height: 34px;">
+                    <svg class="glyph glyph-xs"><use href="#glyph-eye"></use></svg>
+                    <span>Preview</span>
+                  </button>
+                  <button type="button" id="wearApplyBtn" class="btn-inject" style="flex: 1.5; height: 34px;">
+                    <svg class="glyph glyph-xs"><use href="#glyph-tune"></use></svg>
+                    <span>APPLY WEAR</span>
+                  </button>
+                </div>
               </div>
             </div>
 
