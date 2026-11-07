@@ -1074,7 +1074,7 @@ export function renderSkinLibraryGrid() {
       applyBtnIcon = "#glyph-restore";
     } else if (isGlove) {
       applyBtnText = "Apply Gloves";
-      applyBtnIcon = "#glyph-weapon";
+      applyBtnIcon = "#glyph-glove";
     }
 
     card.innerHTML = `

@@ -281,6 +281,33 @@ function setupEventListeners() {
   });
 
   if (els.colorApplyBtn) {
+    // Screen 3: Surface Wear Slider & Dither Algorithm listeners
+    const wearSlider = document.getElementById("colorWearSlider");
+    const wearVal = document.getElementById("colorWearVal");
+    if (wearSlider) {
+      wearSlider.addEventListener("input", (e) => {
+        const v = parseFloat(e.target.value);
+        state.colorStudio.params.wear = v;
+        if (wearVal) {
+          let label = `${v}% (Factory New)`;
+          if (v > 75) label = `${v}% (Battle-Scarred)`;
+          else if (v > 45) label = `${v}% (Well-Worn)`;
+          else if (v > 20) label = `${v}% (Field-Tested)`;
+          else if (v > 5) label = `${v}% (Minimal Wear)`;
+          wearVal.textContent = label;
+        }
+        schedulePreview();
+      });
+    }
+
+    const ditherAlgo = document.getElementById("colorDitherAlgo");
+    if (ditherAlgo) {
+      ditherAlgo.addEventListener("change", (e) => {
+        state.colorStudio.params.dither = e.target.value;
+        schedulePreview();
+      });
+    }
+
     els.colorApplyBtn.addEventListener("click", async () => {
       await applyColorGradingToModel();
     });

@@ -25,6 +25,9 @@ const els = {
   get v3dReloadBtn() { return document.getElementById("v3dReloadBtn"); },
   get v3dSoundPreviewBtn() { return document.getElementById("v3dSoundPreviewBtn"); },
 
+  // Tactical CS 1.6 FPV Crosshair
+  get v3dFpvCrosshair() { return document.getElementById("v3dFpvCrosshair"); },
+
   // Floating 3D Slot Repositioning Banner
   get v3dRepositionBanner() { return document.getElementById("v3dRepositionBanner"); },
   get v3dRepositionSlotName() { return document.getElementById("v3dRepositionSlotName"); },
@@ -582,6 +585,34 @@ export async function init3DScene() {
   repositionReticleMesh = createGhostDecalCursor();
   scene.add(repositionReticleMesh);
 
+  // 8. Dynamic FPV Bullet Trajectory Raycast & Impact Reticle
+  const trajPositions = new Float32Array(6);
+  const trajGeom = new THREE.BufferGeometry();
+  trajGeom.setAttribute("position", new THREE.BufferAttribute(trajPositions, 3));
+  const trajMat = new THREE.LineBasicMaterial({
+    color: 0x38bdf8,
+    transparent: true,
+    opacity: 0.85,
+    blending: THREE.AdditiveBlending,
+  });
+  const trajLine = new THREE.Line(trajGeom, trajMat);
+  trajLine.visible = false;
+  scene.add(trajLine);
+  state.viewport3d.trajectoryLine = trajLine;
+
+  const reticleGeom = new THREE.RingGeometry(0.3, 0.45, 16);
+  const reticleMat = new THREE.MeshBasicMaterial({
+    color: 0x38bdf8,
+    transparent: true,
+    opacity: 0.75,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending,
+  });
+  const reticleMesh = new THREE.Mesh(reticleGeom, reticleMat);
+  reticleMesh.visible = false;
+  scene.add(reticleMesh);
+  state.viewport3d.trajectoryHitReticle = reticleMesh;
+
   // Setup Raycasting and Slot Repositioning Interactions
   setupRaycastAndRepositionInteractions(renderer.domElement, camera, meshGroup);
 
@@ -745,6 +776,39 @@ export async function init3DScene() {
       meshGroup.rotation.set(0, inspRotY, inspRotZ);
     }
 
+    // Dynamic FPV Bullet Trajectory Raycast & Tactical Crosshair
+    const isFpvMode = state.viewport3d.currentMode === "fpv";
+    if (els.v3dFpvCrosshair) {
+      const showCross = isFpvMode && (state.viewport3d.showCrosshair !== false);
+      els.v3dFpvCrosshair.classList.toggle("hidden", !showCross);
+    }
+
+    if (state.viewport3d.trajectoryLine) {
+      const showTraj = isFpvMode && (state.viewport3d.showTrajectory !== false);
+      state.viewport3d.trajectoryLine.visible = showTraj;
+      if (state.viewport3d.trajectoryHitReticle) {
+        state.viewport3d.trajectoryHitReticle.visible = showTraj;
+      }
+
+      if (showTraj) {
+        const muzzlePos = new THREE.Vector3(
+          meshGroup.position.x + 0.15,
+          meshGroup.position.y + 0.22,
+          meshGroup.position.z - 11.5
+        );
+        const targetPos = new THREE.Vector3(0, 0, -85.0);
+
+        const posAttr = state.viewport3d.trajectoryLine.geometry.attributes.position;
+        posAttr.setXYZ(0, muzzlePos.x, muzzlePos.y, muzzlePos.z);
+        posAttr.setXYZ(1, targetPos.x, targetPos.y, targetPos.z);
+        posAttr.needsUpdate = true;
+
+        if (state.viewport3d.trajectoryHitReticle) {
+          state.viewport3d.trajectoryHitReticle.position.copy(targetPos);
+        }
+      }
+    }
+
 renderer.render(scene, camera);
   }
   animate();
@@ -753,23 +817,36 @@ renderer.render(scene, camera);
 /**
  * Loads model geometry and materials from backend endpoint /api/model_3d
  */
-export async function load3DModelGeometry() {
+export async function load3DModelGeometry(targetTripletType = null) {
   if (!state.viewport3d.initialized) return;
+
+  if (targetTripletType) {
+    state.viewport3d.tripletType = targetTripletType;
+  }
+  const currentTriplet = state.viewport3d.tripletType || "v";
 
   if (els.v3dPlaceholder) {
     els.v3dPlaceholder.style.display = "flex";
-    els.v3dPlaceholder.innerHTML = '<div class="spinner"></div><p>Loading 3D StudioModel Geometry...</p>';
+    const tLabel = currentTriplet === "p" ? "Player Model (p_*.mdl)" : currentTriplet === "w" ? "World Model (w_*.mdl)" : "Viewmodel (v_*.mdl)";
+    els.v3dPlaceholder.innerHTML = `<div class="spinner"></div><p>Loading 3D ${tLabel} Geometry...</p>`;
   }
 
   try {
     const reqWeapon = state.currentWeapon;
     const reqTeam = state.currentTeam;
-    const res = await apiGet(`/api/model_3d?team=${reqTeam}&weapon=${reqWeapon}`);
+    const res = await apiGet(`/api/model_3d?team=${reqTeam}&weapon=${reqWeapon}&type=${currentTriplet}`);
     if (reqWeapon !== state.currentWeapon || reqTeam !== state.currentTeam) {
       // Discard stale response from fast-switching weapons
       return;
     }
-    if (!res.success) throw new Error(res.error || "Failed to load 3D data");
+    if (!res.success) {
+      if (currentTriplet !== "v") {
+        showToast(res.error || `Could not load ${currentTriplet.toUpperCase()}-Model. Switching to Viewmodel.`, "warning");
+        setTripletMeshView("v");
+        return;
+      }
+      throw new Error(res.error || "Failed to load 3D data");
+    }
 
     const group = state.viewport3d.meshGroup;
 
@@ -864,7 +941,8 @@ export async function load3DModelGeometry() {
 
         if (!mat) {
         // Find texture preview from active modelData
-        const texEntry = state.modelData ? state.modelData.textures.find((t) => t.index === m.texture_index) : null;
+        const availableTextures = (res.textures && res.textures.length > 0) ? res.textures : (state.modelData ? state.modelData.textures : []);
+        const texEntry = availableTextures.find((t) => t.index === m.texture_index || t.name === m.texture_name);
         const previewUri = texEntry ? texEntry.preview : null;
 
         if (previewUri) {
@@ -1082,6 +1160,21 @@ export async function load3DModelGeometry() {
       group.add(mesh);
     });
 
+    // Update real-time GoldSrc polygon triangle budget telemetry
+    const trisBadge = document.getElementById("trisCountBadge");
+    const totalTris = Math.floor(totalVerts / 3);
+    // trisBadge declared above
+    const trisVal = document.getElementById("trisCountVal");
+    // trisBadge declared above
+    // trisVal reused from line 1165
+    if (trisVal) {
+      trisVal.textContent = `${totalTris.toLocaleString()} TRIS`;
+    }
+    if (trisBadge) {
+      trisBadge.title = `Total Model Polygons: ${totalTris.toLocaleString()} tris (GoldSrc budget: 2,048 tris)`;
+      trisBadge.classList.toggle("budget-warning", totalTris > 2048);
+    }
+
     // Update last loaded weapon and team to decide whether to re-center & reset camera
     const isSameWeapon = (state.viewport3d.lastLoadedWeapon === reqWeapon && state.viewport3d.lastLoadedTeam === reqTeam);
     state.viewport3d.lastLoadedWeapon = reqWeapon;
@@ -1096,9 +1189,10 @@ export async function load3DModelGeometry() {
       group.position.set(-c[0], -c[1], -c[2]);
 
       // Focus camera proportional to weapon dimensions
-      if (!isSameWeapon && state.viewport3d.currentMode === "orbit") {
+      if ((!isSameWeapon || state.viewport3d.tripletChanged) && state.viewport3d.currentMode === "orbit") {
+        state.viewport3d.tripletChanged = false;
         const r = wb.radius || 20;
-        state.viewport3d.camera.position.set(0, r * 0.45, r * 2.2);
+        state.viewport3d.camera.position.set(r * 1.15, r * 0.65, r * 1.85);
         if (state.viewport3d.controls) {
           state.viewport3d.controls.target.set(0, 0, 0);
           state.viewport3d.controls.update();
@@ -1110,8 +1204,24 @@ export async function load3DModelGeometry() {
     applyMeshVisibility();
     applyStickerHighlight();
 
+    const totalTriangles = res.total_triangles || Math.round(totalVerts / 3);
     if (els.v3dStats) {
-      els.v3dStats.textContent = `Meshes: ${res.mesh_count} • Vertices: ${totalVerts} • Triangles: ${Math.round(totalVerts / 3)}`;
+      els.v3dStats.textContent = `Meshes: ${res.mesh_count} • Vertices: ${totalVerts} • Triangles: ${totalTriangles}`;
+    }
+
+    // trisVal reused from line 1165
+    // trisBadge declared above
+    if (trisVal) {
+      trisVal.textContent = `${totalTriangles.toLocaleString()} Tris`;
+      if (trisBadge) {
+        if (totalTriangles > 2048) {
+          trisBadge.classList.add("stat-warn");
+          trisBadge.title = `High-Poly Mesh: ${totalTriangles.toLocaleString()} triangles (GoldSrc budget: 2,048 recommended)`;
+        } else {
+          trisBadge.classList.remove("stat-warn");
+          trisBadge.title = `GoldSrc Standard: ${totalTriangles.toLocaleString()} triangles (Optimal budget)`;
+        }
+      }
     }
     if (els.v3dPlaceholder) {
       els.v3dPlaceholder.style.display = "none";
@@ -1125,7 +1235,33 @@ export async function load3DModelGeometry() {
   }
 }
 
+export function setTripletMeshView(tripletType) {
+  state.viewport3d.tripletType = tripletType;
+  ["v", "p", "w"].forEach((t) => {
+    const btn = document.getElementById(`tripletBtn${t.toUpperCase()}`);
+    if (btn) {
+      if (t === tripletType) btn.classList.add("active");
+      else btn.classList.remove("active");
+    }
+  });
+  state.viewport3d.tripletChanged = true;
+  load3DModelGeometry(tripletType);
+  eventBus.emit("triplet:changed", {
+    type: tripletType,
+    weapon: state.currentWeapon,
+    team: state.currentTeam,
+  });
+}
+
 function setupToolbarEvents() {
+  // Stage Triplet Switcher (V-Model / P-Model / W-Model)
+  ["v", "p", "w"].forEach((type) => {
+    const btn = document.getElementById(`tripletBtn${type.toUpperCase()}`);
+    btn?.addEventListener("click", () => {
+      setTripletMeshView(type);
+    });
+  });
+
   if (els.v3dWeaponOnlyBtn) {
     els.v3dWeaponOnlyBtn.addEventListener("click", () => {
       toggleWeaponOnly();
@@ -1481,7 +1617,7 @@ function focusCameraToWeapon() {
   const r = (wb && wb.radius) ? wb.radius : 20;
 
   state.viewport3d.controls.target.set(0, 0, 0);
-  state.viewport3d.camera.position.set(0, r * 0.45, r * 2.2);
+  state.viewport3d.camera.position.set(r * 1.15, r * 0.65, r * 1.85);
   state.viewport3d.controls.update();
 
   if (state.viewport3d.meshGroup) {
@@ -1551,6 +1687,9 @@ function updateToolbarButtonStates() {
 function resetCameraView() {
   if (!state.viewport3d.camera) return;
   state.viewport3d.currentMode = "orbit";
+  if (els.v3dFpvCrosshair) els.v3dFpvCrosshair.classList.add("hidden");
+  if (state.viewport3d.trajectoryLine) state.viewport3d.trajectoryLine.visible = false;
+  if (state.viewport3d.trajectoryHitReticle) state.viewport3d.trajectoryHitReticle.visible = false;
   if (state.viewport3d.controls) {
     state.viewport3d.controls.enabled = true;
   }
@@ -1559,7 +1698,7 @@ function resetCameraView() {
 
   const wb = state.viewport3d.currentWeaponBounds || state.viewport3d.currentBounds;
   const r = (wb && wb.radius) ? wb.radius : 20;
-  state.viewport3d.camera.position.set(0, r * 0.45, r * 2.2);
+  state.viewport3d.camera.position.set(r * 1.15, r * 0.65, r * 1.85);
   if (state.viewport3d.controls) {
     state.viewport3d.controls.target.set(0, 0, 0);
     state.viewport3d.controls.update();
@@ -1681,6 +1820,9 @@ function toggleShowcaseMode() {
   }
 
   state.viewport3d.currentMode = "showcase";
+  if (els.v3dFpvCrosshair) els.v3dFpvCrosshair.classList.add("hidden");
+  if (state.viewport3d.trajectoryLine) state.viewport3d.trajectoryLine.visible = false;
+  if (state.viewport3d.trajectoryHitReticle) state.viewport3d.trajectoryHitReticle.visible = false;
 
   // Optimal 3/4 showcase presentation angle based on weapon bounds
   const wb = state.viewport3d.currentWeaponBounds || state.viewport3d.currentBounds;

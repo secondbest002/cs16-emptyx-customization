@@ -12,7 +12,9 @@ import math
 import os
 from pathlib import Path
 import shutil
+import subprocess
 import sys
+import time
 from typing import Optional, Union
 import urllib.parse
 from PIL import Image
@@ -77,6 +79,8 @@ from ..amxx_manager import (
     parse_active_loadout,
     set_active_loadout,
     sync_pw_models,
+    get_triplet_status,
+    resolve_triplet_models,
 )
 from ..chrome_injector import (
     MAXSTUDIOBODYPARTS,
@@ -102,6 +106,31 @@ from ..sleeve_injector import (
 )
 
 STATIC_DIR = Path(__file__).parent / "static"
+
+_GAME_STATUS_CACHE = {"running": False, "ts": 0.0}
+
+
+def is_hl_game_running() -> bool:
+    """Checks whether Counter-Strike 1.6 engine (hl.exe) is currently active."""
+    now = time.time()
+    if now - _GAME_STATUS_CACHE["ts"] < 2.5:
+        return _GAME_STATUS_CACHE["running"]
+    try:
+        flags = 0x08000000 if hasattr(subprocess, "CREATE_NO_WINDOW") else 0
+        res = subprocess.run(
+            ["tasklist", "/FI", "IMAGENAME eq hl.exe"],
+            capture_output=True,
+            text=True,
+            timeout=1.5,
+            creationflags=flags,
+        )
+        is_running = "hl.exe" in (res.stdout or "").lower()
+    except Exception:
+        is_running = False
+    _GAME_STATUS_CACHE["running"] = is_running
+    _GAME_STATUS_CACHE["ts"] = now
+    return is_running
+
 
 
 def _safe_float(val, default: float = 0.0) -> float:
@@ -234,14 +263,34 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                 self._send_json({"success": False, "error": str(e)}, status=500)
             return
 
+        elif path == "/api/engine/status":
+            is_running = is_hl_game_running()
+            self._send_json({
+                "success": True,
+                "is_game_running": is_running,
+                "process_name": "hl.exe" if is_running else None,
+                "port": 27015 if is_running else None,
+                "mode": "ACTIVE IN-GAME" if is_running else "STANDALONE DCC",
+                "goldsrc_version": "IDST v10",
+            })
+            return
+
         elif path == "/api/model":
             team = query.get("team", ["ct"])[0]
             weapon = query.get("weapon", ["usp"])[0]
             custom_path = query.get("path", [None])[0]
+            triplet_type = query.get("type", ["v"])[0].lower()
 
             try:
                 if custom_path:
                     mdl_path = Path(custom_path).resolve()
+                elif triplet_type in ("p", "w"):
+                    triplets = resolve_triplet_models(weapon, team=team, root_dir=self.workspace_root)
+                    target_mdl = triplets.get(triplet_type)
+                    if target_mdl and target_mdl.is_file():
+                        mdl_path = target_mdl
+                    else:
+                        mdl_path = resolve_model_path(weapon, team=team, root_dir=self.workspace_root)
                 else:
                     mdl_path = resolve_model_path(weapon, team=team, root_dir=self.workspace_root)
 
@@ -265,6 +314,7 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                         "model_path": str(mdl_path),
                         "team": team,
                         "weapon": weapon,
+                        "triplet_type": triplet_type,
                         "has_orig_backup": orig_exists,
                         "textures": textures_data,
                     }
@@ -309,6 +359,7 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
             team = query.get("team", ["ct"])[0]
             weapon = query.get("weapon", ["usp"])[0]
             custom_path = query.get("path", [None])[0]
+            triplet_type = query.get("type", ["v"])[0].lower()
             try:
                 if custom_path:
                     mdl_path = Path(custom_path).resolve()
@@ -365,15 +416,36 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
             team = query.get("team", ["ct"])[0]
             weapon = query.get("weapon", ["usp"])[0]
             custom_path = query.get("path", [None])[0]
+            triplet_type = query.get("type", ["v"])[0].lower()
 
             try:
                 if custom_path:
                     mdl_path = Path(custom_path).resolve()
+                elif triplet_type in ("p", "w"):
+                    triplets = resolve_triplet_models(weapon, team=team, root_dir=self.workspace_root)
+                    target = triplets.get(triplet_type)
+                    if not target or not target.is_file():
+                        self._send_json({
+                            "success": False,
+                            "error": f"Model for '{triplet_type}_{weapon}.mdl' not found. Please sync viewmodel first."
+                        }, status=404)
+                        return
+                    mdl_path = target
                 else:
                     mdl_path = resolve_model_path(weapon, team=team, root_dir=self.workspace_root)
 
                 model_3d = extract_model_3d(mdl_path)
-                self._send_json({"success": True, "model_name": mdl_path.name, **model_3d})
+                self._send_json({"success": True, "model_name": mdl_path.name, "triplet_type": triplet_type, **model_3d})
+            except Exception as e:
+                self._send_json({"success": False, "error": str(e)}, status=500)
+            return
+
+        elif path == "/api/triplets/status":
+            team = query.get("team", ["ct"])[0]
+            weapon = query.get("weapon", ["usp"])[0]
+            try:
+                status_data = get_triplet_status(weapon=weapon, team=team, root_dir=self.workspace_root)
+                self._send_json(status_data)
             except Exception as e:
                 self._send_json({"success": False, "error": str(e)}, status=500)
             return
@@ -452,6 +524,7 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
             team = query.get("team", ["ct"])[0]
             weapon = query.get("weapon", ["usp"])[0]
             custom_path = query.get("path", [None])[0]
+            triplet_type = query.get("type", ["v"])[0].lower()
 
             try:
                 if custom_path:
@@ -491,6 +564,7 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
             team = query.get("team", ["ct"])[0]
             weapon = query.get("weapon", ["usp"])[0]
             custom_path = query.get("path", [None])[0]
+            triplet_type = query.get("type", ["v"])[0].lower()
             donor_preset = query.get("donor_preset", ["sas_navy"])[0]
             custom_donor_path = query.get("donor_path", [None])[0]
 
@@ -1067,6 +1141,7 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                     "tint": float(req_data.get("tint", 0)),
                     "hue": float(req_data.get("hue", 0)),
                     "sharpen": float(req_data.get("sharpen", 0)),
+                    "wear": float(req_data.get("wear", 0)),
                     "hsl_adjustments": req_data.get("hsl_adjustments"),
                 }
 
@@ -1107,14 +1182,17 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                     "tint": float(req_data.get("tint", 0)),
                     "hue": float(req_data.get("hue", 0)),
                     "sharpen": float(req_data.get("sharpen", 0)),
+                    "wear": float(req_data.get("wear", 0)),
                     "hsl_adjustments": req_data.get("hsl_adjustments"),
                 }
 
                 model.save_slot_snapshot(target_tex)
                 is_tex_masked = bool(target_tex.is_masked or target_tex.role == "sticker")
+                dither_choice = str(req_data.get("dither", "floyd_steinberg"))
                 payload, preview_rgba = adjust_and_quantize(
                     target_tex.to_rgba_image(),
                     is_masked=is_tex_masked,
+                    dither=dither_choice,
                     **color_params,
                 )
                 model.inject_texture_payload(target_tex, payload)
@@ -1749,6 +1827,8 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                 team = req_data.get("team", "ct")
                 auto_backup = _safe_bool(req_data.get("auto_backup"), True)
                 include_stickers = _safe_bool(req_data.get("include_stickers"), False)
+                sync_p = _safe_bool(req_data.get("sync_p"), True)
+                sync_w = _safe_bool(req_data.get("sync_w"), True)
                 v_model = req_data.get("v_model")
                 p_model = req_data.get("p_model")
                 w_model = req_data.get("w_model")
@@ -1763,6 +1843,8 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                         p_model_path=p_model,
                         w_model_path=w_model,
                         include_stickers=include_stickers,
+                        sync_p=sync_p,
+                        sync_w=sync_w,
                     )
                     self._send_json(result)
                 except Exception as e:

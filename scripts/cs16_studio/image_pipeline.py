@@ -87,7 +87,9 @@ def quantize_goldsrc(
     is_masked: bool = False,
     alpha_thresh: int = 128,
     defringe: bool = True,
+    dither: str = "floyd_steinberg",
 ) -> Tuple[bytes, bytes]:
+    dither_mode = Image.Dither.NONE if str(dither).lower() in ("none", "off", "0") else Image.Dither.FLOYDSTEINBERG
     w, h = img.width, img.height
 
     if is_masked:
@@ -114,7 +116,7 @@ def quantize_goldsrc(
         raw_pal = raw_pal[: 255 * 3] + list(GOLDSRC_MASK_COLOR)
 
         rgb_img = img.convert("RGB")
-        q_img = rgb_img.quantize(palette=q_patch, dither=Image.Dither.NONE)
+        q_img = rgb_img.quantize(palette=q_patch, dither=dither_mode)
 
         pixel_arr = np.array(q_img, dtype=np.uint8)
         pixel_arr[pixel_arr >= 255] = 254
@@ -124,7 +126,7 @@ def quantize_goldsrc(
 
     else:
         rgb_img = img.convert("RGB")
-        q_img = rgb_img.quantize(colors=256, method=Image.Quantize.MEDIANCUT)
+        q_img = rgb_img.quantize(colors=256, method=Image.Quantize.MEDIANCUT, dither=dither_mode)
 
         raw_pal = list(q_img.getpalette() or [])[: 256 * 3]
         while len(raw_pal) < 256 * 3:

@@ -84,7 +84,6 @@ class StudioConfig:
             p = Path(str(cfg_path)).resolve()
             if (p / "cstrike").is_dir():
                 return p
-            return p
 
         # 4. Sibling directory check (e.g. D:\Counter-Strike 1.6\Counter-Strike 1.6 Original)
         sibling = self.studio_root.parent / "Counter-Strike 1.6 Original"

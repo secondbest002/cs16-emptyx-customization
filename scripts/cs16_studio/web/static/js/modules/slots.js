@@ -199,7 +199,7 @@ function createTextureCard(tex) {
 
         <div class="slot-quick-btns">
           <button type="button" class="btn-tool quick-lib-btn" id="quickLibBtn_${tex.index}" title="Choose asset from library for this slot">
-            <svg class="glyph glyph-xs text-cyan"><use href="#${tex.role === 'skin' ? 'glyph-palette' : tex.role === 'glove' ? 'glyph-weapon' : 'glyph-sparkle'}"></use></svg>
+            <svg class="glyph glyph-xs text-cyan"><use href="#${tex.role === 'skin' ? 'glyph-palette' : tex.role === 'glove' ? 'glyph-glove' : 'glyph-sparkle'}"></use></svg>
             <span>${tex.role === 'skin' ? 'Pick Skin' : tex.role === 'glove' ? 'Pick Glove' : tex.role === 'stattrak' ? 'Customize LED' : 'Pick Sticker'}</span>
           </button>
 
@@ -464,6 +464,15 @@ async function injectPendingSlot(tex) {
     if (injectBtn) injectBtn.disabled = true;
 
     eventBus.emit("model:reloadRequest");
+
+    // Check if injected slot is a weapon skin (p/w sync candidate)
+    if (tex.role === "skin") {
+      eventBus.emit("pw:promptSync", {
+        weapon: actionWeapon,
+        team: actionTeam,
+        textureName: tex.name,
+      });
+    }
   } catch (err) {
     showToast(`Injection failed: ${err.message}`, "error");
   } finally {

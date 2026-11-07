@@ -1156,6 +1156,27 @@ const POV_PRESET_MAP = {
   vanilla_16: { offset_x: 0.0, offset_y: 0.0, offset_z: 0.0, sway: 0.0 },
 };
 
+function formatSigned(num) {
+  const n = Number(num);
+  const sign = n > 0 ? "+" : "";
+  return `${sign}${n.toFixed(2)}`;
+}
+
+function updatePovConsoleCode(ox, oy, oz, sway) {
+  const codeEl = document.getElementById("povConsoleCode");
+  if (!codeEl) return;
+  const bobLat = (0.4 * sway).toFixed(2);
+  const bobVert = (0.25 * sway).toFixed(2);
+  codeEl.textContent = `// CS 1.6 Viewmodel Stance (userconfig.cfg)
+viewmodel_offset_x "${ox.toFixed(2)}"
+viewmodel_offset_y "${oy.toFixed(2)}"
+viewmodel_offset_z "${oz.toFixed(2)}"
+cl_bobamt_lat "${bobLat}"
+cl_bobamt_vert "${bobVert}"
+cl_bob_lower_amt "21.0"
+cl_bobcycle "0.80"`;
+}
+
 function updatePovSlidersFromState(cfg) {
   const wep = (state.currentWeapon || "").toLowerCase();
   const isDualElites = wep.includes("elite");
@@ -1169,16 +1190,20 @@ function updatePovSlidersFromState(cfg) {
   const oz = cfg.offset_z ?? 0.0;
   const sway = cfg.sway ?? 1.0;
 
-  if (proEls.povSliderX) proEls.povSliderX.value = ox;
+  if (proEls.povSliderX) {
+    proEls.povSliderX.value = ox;
+    proEls.povSliderX.disabled = isDualElites;
+  }
   if (proEls.povSliderY) proEls.povSliderY.value = oy;
   if (proEls.povSliderZ) proEls.povSliderZ.value = oz;
   if (proEls.povSliderSway) proEls.povSliderSway.value = sway;
 
-  if (proEls.povValX) proEls.povValX.textContent = Number(ox).toFixed(1);
-  if (proEls.povValY) proEls.povValY.textContent = Number(oy).toFixed(1);
-  if (proEls.povValZ) proEls.povValZ.textContent = Number(oz).toFixed(1);
-  if (proEls.povValSway) proEls.povValSway.textContent = Number(sway).toFixed(1);
+  if (proEls.povValX) proEls.povValX.textContent = formatSigned(ox);
+  if (proEls.povValY) proEls.povValY.textContent = formatSigned(oy);
+  if (proEls.povValZ) proEls.povValZ.textContent = formatSigned(oz);
+  if (proEls.povValSway) proEls.povValSway.textContent = `${Number(sway).toFixed(2)}x`;
 
+  updatePovConsoleCode(ox, oy, oz, sway);
   eventBus.emit("3d:setPovOffsets", { offset_x: ox, offset_y: oy, offset_z: oz, sway: sway });
 }
 
@@ -1207,11 +1232,12 @@ function setupPovDrawerEvents() {
     const oz = parseFloat(proEls.povSliderZ?.value || 0.0);
     const sway = parseFloat(proEls.povSliderSway?.value || 1.0);
 
-    if (proEls.povValX) proEls.povValX.textContent = ox.toFixed(1);
-    if (proEls.povValY) proEls.povValY.textContent = oy.toFixed(1);
-    if (proEls.povValZ) proEls.povValZ.textContent = oz.toFixed(1);
-    if (proEls.povValSway) proEls.povValSway.textContent = sway.toFixed(1);
+    if (proEls.povValX) proEls.povValX.textContent = formatSigned(ox);
+    if (proEls.povValY) proEls.povValY.textContent = formatSigned(oy);
+    if (proEls.povValZ) proEls.povValZ.textContent = formatSigned(oz);
+    if (proEls.povValSway) proEls.povValSway.textContent = `${sway.toFixed(2)}x`;
 
+    updatePovConsoleCode(ox, oy, oz, sway);
     eventBus.emit("3d:setPovOffsets", { offset_x: ox, offset_y: oy, offset_z: oz, sway: sway });
   };
 
@@ -1219,6 +1245,48 @@ function setupPovDrawerEvents() {
   if (proEls.povSliderY) proEls.povSliderY.addEventListener("input", onSliderChange);
   if (proEls.povSliderZ) proEls.povSliderZ.addEventListener("input", onSliderChange);
   if (proEls.povSliderSway) proEls.povSliderSway.addEventListener("input", onSliderChange);
+
+  // Copy cfg button
+  const copyBtn = document.getElementById("povCopyCfgBtn");
+  copyBtn?.addEventListener("click", () => {
+    const codeEl = document.getElementById("povConsoleCode");
+    if (codeEl?.textContent) {
+      navigator.clipboard.writeText(codeEl.textContent).then(() => {
+        showToast("Copied viewmodel cvars to clipboard!", "success");
+      }).catch(() => {
+        showToast("Failed to copy to clipboard", "error");
+      });
+    }
+  });
+
+  // Raycast HUD & Crosshair checkboxes
+  const trajCheck = document.getElementById("povTrajectoryCheck");
+  trajCheck?.addEventListener("change", (e) => {
+    state.viewport3d.showTrajectory = e.target.checked;
+  });
+
+  const crossCheck = document.getElementById("povCrosshairCheck");
+  crossCheck?.addEventListener("change", (e) => {
+    state.viewport3d.showCrosshair = e.target.checked;
+    const ch = document.getElementById("v3dFpvCrosshair");
+    if (ch) ch.classList.toggle("hidden", !e.target.checked);
+  });
+
+  // Listen to weapon changes to adjust Dual Elites lock
+  eventBus.on("weapon:changed", ({ weapon }) => {
+    const wep = (weapon || "").toLowerCase();
+    const isDualElites = wep.includes("elite");
+    if (proEls.povDualElitesNotice) {
+      proEls.povDualElitesNotice.classList.toggle("hidden", !isDualElites);
+    }
+    if (proEls.povSliderX && isDualElites) {
+      proEls.povSliderX.value = 0.0;
+      proEls.povSliderX.disabled = true;
+      if (proEls.povValX) proEls.povValX.textContent = "+0.00";
+    } else if (proEls.povSliderX) {
+      proEls.povSliderX.disabled = false;
+    }
+  });
 
   // Apply to game
   if (proEls.povApplyGameBtn) {
@@ -1277,4 +1345,7 @@ function setupPovDrawerEvents() {
       }
     });
   }
+
+  // Initial console preview update
+  updatePovConsoleCode(2.5, 1.5, -1.5, 1.0);
 }

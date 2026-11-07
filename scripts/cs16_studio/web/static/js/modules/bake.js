@@ -45,7 +45,33 @@ const els = {
   get bakeNudgeUp() { return document.getElementById("bakeNudgeUp"); },
   get bakeNudgeDown() { return document.getElementById("bakeNudgeDown"); },
   get bakeNudgeStepToggle() { return document.getElementById("bakeNudgeStepToggle"); },
+
+  // Screen 3: Rulers, UV Wireframe & Telemetry HUD Elements
+  get rulerHCanvas() { return document.getElementById("rulerHCanvas"); },
+  get rulerVCanvas() { return document.getElementById("rulerVCanvas"); },
+  get uvWireCanvas() { return document.getElementById("uvWireCanvas"); },
+  get uvWireframeToggleBtn() { return document.getElementById("uvWireframeToggleBtn"); },
+  get uvWireframeLabel() { return document.getElementById("uvWireframeLabel"); },
+  get rulersToggleBtn() { return document.getElementById("rulersToggleBtn"); },
+  get rulersLabel() { return document.getElementById("rulersLabel"); },
+  get rulerWorkspace() { return document.getElementById("rulerWorkspace"); },
+  get telemCoords() { return document.getElementById("telemCoords"); },
+  get telemUvNorm() { return document.getElementById("telemUvNorm"); },
+  get telemScaleVal() { return document.getElementById("telemScaleVal"); },
+  get telemRotVal() { return document.getElementById("telemRotVal"); },
+  get telemQuantVal() { return document.getElementById("telemQuantVal"); },
+  get paletteCellsTrack() { return document.getElementById("paletteCellsTrack"); },
+  get paletteHoverReadout() { return document.getElementById("paletteHoverReadout"); },
 };
+
+let showUvWireframe = true;
+let showRulers = true;
+let gizmoDragMode = null; // null | 'move' | 'rotate' | 'scale'
+let gizmoInitialScale = 1.0;
+let gizmoInitialDist = 0;
+let gizmoInitialAngle = 0;
+let gizmoInitialRot = 0;
+let cursorCoords = { x: 0, y: 0 };
 
 export function initBakeModule() {
   setupEventListeners();
@@ -137,6 +163,8 @@ export function loadActiveSkinToCanvas() {
     if (els.bakeInputY) { els.bakeInputY.min = 0; els.bakeInputY.max = h; }
     updateCoordUI();
     renderBakeCanvas();
+    drawUvWireframe(parseInt(skinIdx, 10), img.width, img.height);
+    renderPaletteStrip(tex.palette, tex.is_masked);
   };
   img.src = tex.preview;
 }
@@ -219,35 +247,95 @@ export function renderBakeCanvas() {
   ctx.clearRect(0, 0, bw, bh);
   ctx.drawImage(offscreenBakeCanvas, 0, 0);
 
-  // Draw alignment guidelines ONLY on the interactive 2D editor canvas
+  // Screen 3: Interactive Quad Gizmo with Rotation Handle & Scale Anchors
   if (state.bake.stickerImg) {
+    const sImg = state.bake.stickerImg;
+    const baseDim = Math.round(bw * 0.25 * state.bake.scale);
+    const aspect = sImg.width / Math.max(1, sImg.height);
+    const sw = aspect >= 1.0 ? baseDim : Math.round(baseDim * aspect);
+    const sh = aspect >= 1.0 ? Math.round(baseDim / aspect) : baseDim;
+    const rad = ((state.bake.rotation || 0) * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+
+    function toWorld(lx, ly) {
+      return {
+        x: state.bake.x + (lx * cos - ly * sin),
+        y: state.bake.y + (lx * sin + ly * cos),
+      };
+    }
+
+    const cTL = toWorld(-sw / 2, -sh / 2);
+    const cTR = toWorld(sw / 2, -sh / 2);
+    const cBR = toWorld(sw / 2, sh / 2);
+    const cBL = toWorld(-sw / 2, sh / 2);
+    const rotArmBase = toWorld(0, -sh / 2);
+    const rotHandle = toWorld(0, -sh / 2 - 22);
+
     ctx.save();
+
+    // 1. Alignment Crosshair Guides
     ctx.setLineDash([4, 4]);
-    ctx.strokeStyle = "rgba(6, 182, 212, 0.75)";
+    ctx.strokeStyle = "rgba(56, 189, 248, 0.4)";
     ctx.lineWidth = 1;
-
-    // Horizontal crosshair
     ctx.beginPath();
-    ctx.moveTo(0, state.bake.y);
-    ctx.lineTo(bw, state.bake.y);
+    ctx.moveTo(0, state.bake.y); ctx.lineTo(bw, state.bake.y);
+    ctx.moveTo(state.bake.x, 0); ctx.lineTo(state.bake.x, bh);
     ctx.stroke();
 
-    // Vertical crosshair
+    // 2. High-precision Bounding Box Quad
+    ctx.setLineDash([5, 3]);
+    ctx.strokeStyle = "#38bdf8";
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(state.bake.x, 0);
-    ctx.lineTo(state.bake.x, bh);
+    ctx.moveTo(cTL.x, cTL.y);
+    ctx.lineTo(cTR.x, cTR.y);
+    ctx.lineTo(cBR.x, cBR.y);
+    ctx.lineTo(cBL.x, cBL.y);
+    ctx.closePath();
     ctx.stroke();
 
-    // Bullseye
+    // 3. Rotation Arm & Handle
+    ctx.setLineDash([]);
+    ctx.strokeStyle = "rgba(56, 189, 248, 0.85)";
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.arc(state.bake.x, state.bake.y, 8, 0, 2 * Math.PI);
-    ctx.strokeStyle = "#f59e0b";
-    ctx.lineWidth = 2;
+    ctx.moveTo(rotArmBase.x, rotArmBase.y);
+    ctx.lineTo(rotHandle.x, rotHandle.y);
     ctx.stroke();
+
+    ctx.fillStyle = "#38bdf8";
+    ctx.beginPath();
+    ctx.arc(rotHandle.x, rotHandle.y, 5, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // 4. 4 Corner Scale Anchor Pips (Squares)
+    const corners = [cTL, cTR, cBR, cBL];
+    corners.forEach((c) => {
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(c.x - 4, c.y - 4, 8, 8);
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(c.x - 4, c.y - 4, 8, 8);
+    });
+
+    // 5. Center Pivot Amber Bullseye
+    ctx.beginPath();
+    ctx.arc(state.bake.x, state.bake.y, 4, 0, 2 * Math.PI);
+    ctx.fillStyle = "#f59e0b";
+    ctx.fill();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
     ctx.restore();
   }
 
   updateCoordUI();
+  drawRulers(bw, bh);
 
   // Emit real-time WYSIWYG texture update to Three.js 3D Viewport
   const skinIdx = els.bakeTargetSkin ? parseInt(els.bakeTargetSkin.value, 10) : null;
@@ -256,15 +344,183 @@ export function renderBakeCanvas() {
   }
 }
 
+// Draws the 2D Coordinate Rulers
+export function drawRulers(bw, bh) {
+  if (!showRulers) return;
+  const hCanvas = els.rulerHCanvas;
+  const vCanvas = els.rulerVCanvas;
+  if (!hCanvas || !vCanvas) return;
+
+  if (hCanvas.width !== bw) hCanvas.width = bw;
+  if (vCanvas.height !== bh) vCanvas.height = bh;
+
+  const hCtx = hCanvas.getContext("2d");
+  const vCtx = vCanvas.getContext("2d");
+
+  // Horizontal Ruler
+  hCtx.fillStyle = "#0b0f19";
+  hCtx.fillRect(0, 0, bw, 20);
+  hCtx.strokeStyle = "rgba(56, 189, 248, 0.4)";
+  hCtx.fillStyle = "#94a3b8";
+  hCtx.font = "8px monospace";
+  hCtx.textAlign = "center";
+
+  for (let x = 0; x <= bw; x += 16) {
+    hCtx.beginPath();
+    if (x % 64 === 0) {
+      hCtx.moveTo(x, 8);
+      hCtx.lineTo(x, 20);
+      hCtx.stroke();
+      if (x > 0 && x < bw) hCtx.fillText(String(x), x, 7);
+    } else if (x % 32 === 0) {
+      hCtx.moveTo(x, 13);
+      hCtx.lineTo(x, 20);
+      hCtx.stroke();
+    } else {
+      hCtx.moveTo(x, 16);
+      hCtx.lineTo(x, 20);
+      hCtx.stroke();
+    }
+  }
+
+  // Draw cursor guide on H ruler
+  if (cursorCoords.x >= 0 && cursorCoords.x <= bw) {
+    hCtx.strokeStyle = "#38bdf8";
+    hCtx.lineWidth = 2;
+    hCtx.beginPath();
+    hCtx.moveTo(cursorCoords.x, 0);
+    hCtx.lineTo(cursorCoords.x, 20);
+    hCtx.stroke();
+    hCtx.lineWidth = 1;
+  }
+
+  // Vertical Ruler
+  vCtx.fillStyle = "#0b0f19";
+  vCtx.fillRect(0, 0, 20, bh);
+  vCtx.strokeStyle = "rgba(56, 189, 248, 0.4)";
+  vCtx.fillStyle = "#94a3b8";
+  vCtx.font = "8px monospace";
+  vCtx.textAlign = "left";
+
+  for (let y = 0; y <= bh; y += 16) {
+    vCtx.beginPath();
+    if (y % 64 === 0) {
+      vCtx.moveTo(8, y);
+      vCtx.lineTo(20, y);
+      vCtx.stroke();
+      if (y > 0 && y < bh) vCtx.fillText(String(y), 1, y - 2);
+    } else if (y % 32 === 0) {
+      vCtx.moveTo(13, y);
+      vCtx.lineTo(20, y);
+      vCtx.stroke();
+    } else {
+      vCtx.moveTo(16, y);
+      vCtx.lineTo(20, y);
+      vCtx.stroke();
+    }
+  }
+
+  // Draw cursor guide on V ruler
+  if (cursorCoords.y >= 0 && cursorCoords.y <= bh) {
+    vCtx.strokeStyle = "#38bdf8";
+    vCtx.lineWidth = 2;
+    vCtx.beginPath();
+    vCtx.moveTo(0, cursorCoords.y);
+    vCtx.lineTo(20, cursorCoords.y);
+    vCtx.stroke();
+    vCtx.lineWidth = 1;
+  }
+}
+
+// Draws the 3D Mesh Polygon UV Wireframe Overlay
+export function drawUvWireframe(skinIdx, bw, bh) {
+  const canvas = els.uvWireCanvas;
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  if (canvas.width !== bw) canvas.width = bw;
+  if (canvas.height !== bh) canvas.height = bh;
+
+  ctx.clearRect(0, 0, bw, bh);
+  if (!showUvWireframe) return;
+
+  const model3d = state.viewport3d?.model3dData;
+  if (!model3d || !model3d.meshes) return;
+
+  const targetMesh = model3d.meshes.find((m) => m.texture_index === skinIdx);
+  if (!targetMesh || !targetMesh.uvs || targetMesh.uvs.length === 0) return;
+
+  const uvs = targetMesh.uvs;
+  ctx.save();
+  ctx.strokeStyle = "rgba(56, 189, 248, 0.35)";
+  ctx.lineWidth = 0.75;
+
+  ctx.beginPath();
+  for (let i = 0; i < uvs.length; i += 6) {
+    const x0 = uvs[i] * bw;
+    const y0 = uvs[i + 1] * bh;
+    const x1 = uvs[i + 2] * bw;
+    const y1 = uvs[i + 3] * bh;
+    const x2 = uvs[i + 4] * bw;
+    const y2 = uvs[i + 5] * bh;
+
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.lineTo(x0, y0);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Renders the Floyd-Steinberg 256-Color Palette Strip
+export function renderPaletteStrip(paletteArray, isMasked = false) {
+  const track = els.paletteCellsTrack;
+  if (!track) return;
+  track.innerHTML = "";
+
+  if (!paletteArray || paletteArray.length === 0) {
+    track.innerHTML = '<span style="color:#64748b; font-size:10px; margin:auto;">No indexed palette loaded</span>';
+    return;
+  }
+
+  paletteArray.forEach((hex, idx) => {
+    const cell = document.createElement("div");
+    cell.className = "palette-swatch-cell";
+    cell.style.background = hex;
+    if (idx === 255 && isMasked) cell.classList.add("mask-cell");
+
+    cell.addEventListener("mouseenter", () => {
+      if (els.paletteHoverReadout) {
+        const r = parseInt(hex.slice(1, 3), 16) || 0;
+        const g = parseInt(hex.slice(3, 5), 16) || 0;
+        const b = parseInt(hex.slice(5, 7), 16) || 0;
+        const maskLabel = (idx === 255 && isMasked) ? " • [BLUE KEY MASK]" : "";
+        els.paletteHoverReadout.textContent = `Index #${idx}: ${hex.toUpperCase()} (R: ${r}, G: ${g}, B: ${b})${maskLabel}`;
+      }
+    });
+
+    track.appendChild(cell);
+  });
+}
+
 export function updateCoordUI() {
   const rx = Math.round(state.bake.x || 0);
   const ry = Math.round(state.bake.y || 0);
+  const bw = (els.bakeCanvas && els.bakeCanvas.width) || 512;
+  const bh = (els.bakeCanvas && els.bakeCanvas.height) || 512;
+
   if (els.bakeCoordX) els.bakeCoordX.textContent = rx;
   if (els.bakeCoordY) els.bakeCoordY.textContent = ry;
   if (els.bakeSliderX && parseInt(els.bakeSliderX.value, 10) !== rx) els.bakeSliderX.value = rx;
   if (els.bakeInputX && parseInt(els.bakeInputX.value, 10) !== rx) els.bakeInputX.value = rx;
   if (els.bakeSliderY && parseInt(els.bakeSliderY.value, 10) !== ry) els.bakeSliderY.value = ry;
   if (els.bakeInputY && parseInt(els.bakeInputY.value, 10) !== ry) els.bakeInputY.value = ry;
+
+  // Screen 3: Telemetry HUD readout bar
+  if (els.telemCoords) els.telemCoords.textContent = `X: ${rx}, Y: ${ry}`;
+  if (els.telemUvNorm) els.telemUvNorm.textContent = `(u: ${(rx / bw).toFixed(3)}, v: ${(ry / bh).toFixed(3)})`;
+  if (els.telemScaleVal) els.telemScaleVal.textContent = `${(state.bake.scale || 1.0).toFixed(2)}x`;
+  if (els.telemRotVal) els.telemRotVal.textContent = `${(state.bake.rotation || 0).toFixed(1)}°`;
 }
 
 function setupEventListeners() {
@@ -281,25 +537,100 @@ function setupEventListeners() {
     }
 
     canvas.addEventListener("mousedown", (e) => {
+      const pos = getCanvasCoords(e);
+      if (!state.bake.stickerImg) return;
+
+      const bw = canvas.width;
+      const sImg = state.bake.stickerImg;
+      const baseDim = Math.round(bw * 0.25 * state.bake.scale);
+      const aspect = sImg.width / Math.max(1, sImg.height);
+      const sw = aspect >= 1.0 ? baseDim : Math.round(baseDim * aspect);
+      const sh = aspect >= 1.0 ? Math.round(baseDim / aspect) : baseDim;
+      const rad = ((state.bake.rotation || 0) * Math.PI) / 180;
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+
+      function toWorld(lx, ly) {
+        return {
+          x: state.bake.x + (lx * cos - ly * sin),
+          y: state.bake.y + (lx * sin + ly * cos),
+        };
+      }
+
+      const rotHandle = toWorld(0, -sh / 2 - 22);
+      const distRot = Math.hypot(pos.x - rotHandle.x, pos.y - rotHandle.y);
+
+      if (distRot <= 12) {
+        // Rotation Drag
+        gizmoDragMode = "rotate";
+        gizmoInitialAngle = Math.atan2(pos.y - state.bake.y, pos.x - state.bake.x);
+        gizmoInitialRot = state.bake.rotation || 0;
+        state.bake.isDragging = true;
+        canvas.classList.add("grabbing");
+        return;
+      }
+
+      // Check 4 Corner Scale handles
+      const corners = [
+        toWorld(-sw / 2, -sh / 2),
+        toWorld(sw / 2, -sh / 2),
+        toWorld(sw / 2, sh / 2),
+        toWorld(-sw / 2, sh / 2),
+      ];
+      const isCornerHit = corners.some((c) => Math.hypot(pos.x - c.x, pos.y - c.y) <= 10);
+      if (isCornerHit) {
+        gizmoDragMode = "scale";
+        gizmoInitialDist = Math.hypot(pos.x - state.bake.x, pos.y - state.bake.y);
+        gizmoInitialScale = state.bake.scale || 1.0;
+        state.bake.isDragging = true;
+        canvas.classList.add("grabbing");
+        return;
+      }
+
+      // Default: Move Drag
+      gizmoDragMode = "move";
       state.bake.isDragging = true;
       canvas.classList.add("grabbing");
-      const pos = getCanvasCoords(e);
       state.bake.x = pos.x;
       state.bake.y = pos.y;
       renderBakeCanvas();
     });
 
     window.addEventListener("mousemove", (e) => {
-      if (!state.bake.isDragging) return;
       const pos = getCanvasCoords(e);
-      state.bake.x = Math.max(0, Math.min(canvas.width, pos.x));
-      state.bake.y = Math.max(0, Math.min(canvas.height, pos.y));
-      renderBakeCanvas();
+      cursorCoords = pos;
+      drawRulers(canvas.width, canvas.height);
+
+      if (!state.bake.isDragging) return;
+
+      if (gizmoDragMode === "rotate") {
+        const curAngle = Math.atan2(pos.y - state.bake.y, pos.x - state.bake.x);
+        const deltaDeg = ((curAngle - gizmoInitialAngle) * 180) / Math.PI;
+        let finalDeg = Math.round((gizmoInitialRot + deltaDeg) % 360);
+        if (finalDeg < 0) finalDeg += 360;
+        state.bake.rotation = finalDeg;
+        if (els.bakeRotation) els.bakeRotation.value = finalDeg;
+        if (els.bakeRotationVal) els.bakeRotationVal.textContent = `${finalDeg}°`;
+        renderBakeCanvas();
+      } else if (gizmoDragMode === "scale") {
+        const curDist = Math.hypot(pos.x - state.bake.x, pos.y - state.bake.y);
+        const scaleFactor = curDist / Math.max(10, gizmoInitialDist);
+        let newScale = Math.max(0.2, Math.min(2.5, gizmoInitialScale * scaleFactor));
+        state.bake.scale = parseFloat(newScale.toFixed(2));
+        if (els.bakeScale) els.bakeScale.value = state.bake.scale;
+        if (els.bakeScaleVal) els.bakeScaleVal.textContent = `${state.bake.scale.toFixed(2)}x`;
+        renderBakeCanvas();
+      } else if (gizmoDragMode === "move") {
+        state.bake.x = Math.max(0, Math.min(canvas.width, pos.x));
+        state.bake.y = Math.max(0, Math.min(canvas.height, pos.y));
+        renderBakeCanvas();
+      }
     });
 
     window.addEventListener("mouseup", () => {
       if (state.bake.isDragging) {
         state.bake.isDragging = false;
+        gizmoDragMode = null;
         canvas.classList.remove("grabbing");
       }
     });
@@ -311,6 +642,39 @@ function setupEventListeners() {
       if (els.bakeScale) els.bakeScale.value = state.bake.scale;
       if (els.bakeScaleVal) els.bakeScaleVal.textContent = `${state.bake.scale.toFixed(2)}x`;
       renderBakeCanvas();
+    });
+  }
+
+  // UV Wireframe Toggle Event
+  if (els.uvWireframeToggleBtn) {
+    els.uvWireframeToggleBtn.addEventListener("click", () => {
+      showUvWireframe = !showUvWireframe;
+      els.uvWireframeToggleBtn.classList.toggle("active", showUvWireframe);
+      if (els.uvWireframeLabel) {
+        els.uvWireframeLabel.textContent = showUvWireframe ? "UV Wire: ON" : "UV Wire: OFF";
+      }
+      const skinIdx = els.bakeTargetSkin ? parseInt(els.bakeTargetSkin.value, 10) : 0;
+      const bw = (els.bakeCanvas && els.bakeCanvas.width) || 512;
+      const bh = (els.bakeCanvas && els.bakeCanvas.height) || 512;
+      drawUvWireframe(skinIdx, bw, bh);
+    });
+  }
+
+  // Rulers Toggle Event
+  if (els.rulersToggleBtn) {
+    els.rulersToggleBtn.addEventListener("click", () => {
+      showRulers = !showRulers;
+      els.rulersToggleBtn.classList.toggle("active", showRulers);
+      if (els.rulersLabel) {
+        els.rulersLabel.textContent = showRulers ? "Rulers: ON" : "Rulers: OFF";
+      }
+      if (els.rulerWorkspace) {
+        els.rulerWorkspace.style.gridTemplateColumns = showRulers ? "20px 1fr" : "0px 1fr";
+        els.rulerWorkspace.style.gridTemplateRows = showRulers ? "20px 1fr" : "0px 1fr";
+      }
+      const bw = (els.bakeCanvas && els.bakeCanvas.width) || 512;
+      const bh = (els.bakeCanvas && els.bakeCanvas.height) || 512;
+      drawRulers(bw, bh);
     });
   }
 
@@ -339,7 +703,7 @@ function setupEventListeners() {
       btn.addEventListener("click", () => {
         els.bakePresets.querySelectorAll(".preset-btn").forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
-        applyBakePreset(btn.dataset.preset);
+        applyPreset(btn.dataset.preset);
       });
     });
   }
@@ -363,8 +727,15 @@ function setupEventListeners() {
   if (els.bakeScrape) {
     els.bakeScrape.addEventListener("input", (e) => {
       state.bake.scrape = parseInt(e.target.value, 10);
-      const tier = state.bake.scrape === 0 ? "Mint" : `${state.bake.scrape}% Scraped`;
-      if (els.bakeScrapeVal) els.bakeScrapeVal.textContent = `${state.bake.scrape}% (${tier})`;
+      if (els.bakeScrapeVal) {
+        const val = state.bake.scrape;
+        let label = "Mint (0%)";
+        if (val > 75) label = `Battle-Scarred (${val}%)`;
+        else if (val > 45) label = `Well-Worn (${val}%)`;
+        else if (val > 20) label = `Field-Tested (${val}%)`;
+        else if (val > 0) label = `Light Wear (${val}%)`;
+        els.bakeScrapeVal.textContent = label;
+      }
       renderBakeCanvas();
     });
   }
@@ -372,287 +743,109 @@ function setupEventListeners() {
   if (els.bakeChromeEffect) {
     els.bakeChromeEffect.addEventListener("change", (e) => {
       state.bake.chrome_effect = e.target.value;
-      state.bake.fx = e.target.value;
       renderBakeCanvas();
     });
   }
 
-  if (els.bakeApplyBtn) {
-    els.bakeApplyBtn.addEventListener("click", async () => {
-      await applyBake();
-    });
-  }
-
-  if (els.bakeResetBtn) {
-    els.bakeResetBtn.addEventListener("click", () => {
-      resetBake();
-    });
-  }
-
-  if (els.syncPwModelsBtn) {
-    els.syncPwModelsBtn.addEventListener("click", () => {
-      triggerSyncPw();
-    });
-  }
-
-  // Precision Position Sliders and Number Inputs
   if (els.bakeSliderX) {
     els.bakeSliderX.addEventListener("input", (e) => {
       state.bake.x = parseInt(e.target.value, 10);
-      updateCoordUI();
       renderBakeCanvas();
     });
   }
   if (els.bakeInputX) {
-    els.bakeInputX.addEventListener("input", (e) => {
-      const v = parseInt(e.target.value, 10);
-      if (!isNaN(v)) {
-        state.bake.x = v;
-        updateCoordUI();
-        renderBakeCanvas();
-      }
+    els.bakeInputX.addEventListener("change", (e) => {
+      state.bake.x = parseInt(e.target.value, 10);
+      renderBakeCanvas();
     });
   }
   if (els.bakeSliderY) {
     els.bakeSliderY.addEventListener("input", (e) => {
       state.bake.y = parseInt(e.target.value, 10);
-      updateCoordUI();
       renderBakeCanvas();
     });
   }
   if (els.bakeInputY) {
-    els.bakeInputY.addEventListener("input", (e) => {
-      const v = parseInt(e.target.value, 10);
-      if (!isNaN(v)) {
-        state.bake.y = v;
-        updateCoordUI();
-        renderBakeCanvas();
-      }
-    });
-  }
-
-  // Center Sticker Button
-  if (els.bakeCenterBtn) {
-    els.bakeCenterBtn.addEventListener("click", () => {
-      const bw = els.bakeCanvas ? els.bakeCanvas.width : 512;
-      const bh = els.bakeCanvas ? els.bakeCanvas.height : 512;
-      state.bake.x = Math.round(bw / 2);
-      state.bake.y = Math.round(bh / 2);
-      updateCoordUI();
+    els.bakeInputY.addEventListener("change", (e) => {
+      state.bake.y = parseInt(e.target.value, 10);
       renderBakeCanvas();
     });
   }
 
-  // Precision Nudge D-Pad
-  let nudgeStep = 5;
-  const stepOptions = [1, 5, 10, 25];
-  let stepIdx = 1; // Default 5px
+  if (els.bakeCenterBtn) {
+    els.bakeCenterBtn.addEventListener("click", () => {
+      const bw = (els.bakeCanvas && els.bakeCanvas.width) || 512;
+      const bh = (els.bakeCanvas && els.bakeCanvas.height) || 512;
+      state.bake.x = Math.round(bw / 2);
+      state.bake.y = Math.round(bh / 2);
+      renderBakeCanvas();
+    });
+  }
 
+  const getNudgeStep = () => (state.bake.nudgeStep || 5);
+  if (els.bakeNudgeLeft) {
+    els.bakeNudgeLeft.addEventListener("click", () => {
+      state.bake.x = Math.max(0, state.bake.x - getNudgeStep());
+      renderBakeCanvas();
+    });
+  }
+  if (els.bakeNudgeRight) {
+    els.bakeNudgeRight.addEventListener("click", () => {
+      const bw = (els.bakeCanvas && els.bakeCanvas.width) || 512;
+      state.bake.x = Math.min(bw, state.bake.x + getNudgeStep());
+      renderBakeCanvas();
+    });
+  }
+  if (els.bakeNudgeUp) {
+    els.bakeNudgeUp.addEventListener("click", () => {
+      state.bake.y = Math.max(0, state.bake.y - getNudgeStep());
+      renderBakeCanvas();
+    });
+  }
+  if (els.bakeNudgeDown) {
+    els.bakeNudgeDown.addEventListener("click", () => {
+      const bh = (els.bakeCanvas && els.bakeCanvas.height) || 512;
+      state.bake.y = Math.min(bh, state.bake.y + getNudgeStep());
+      renderBakeCanvas();
+    });
+  }
   if (els.bakeNudgeStepToggle) {
     els.bakeNudgeStepToggle.addEventListener("click", () => {
-      stepIdx = (stepIdx + 1) % stepOptions.length;
-      nudgeStep = stepOptions[stepIdx];
-      els.bakeNudgeStepToggle.textContent = `${nudgeStep}px`;
+      state.bake.nudgeStep = state.bake.nudgeStep === 1 ? 5 : (state.bake.nudgeStep === 5 ? 10 : 1);
+      els.bakeNudgeStepToggle.textContent = `${state.bake.nudgeStep}px`;
     });
   }
 
-  const applyNudge = (dx, dy) => {
-    const bw = els.bakeCanvas ? els.bakeCanvas.width : 512;
-    const bh = els.bakeCanvas ? els.bakeCanvas.height : 512;
-    state.bake.x = Math.max(0, Math.min(bw, (state.bake.x || 0) + dx));
-    state.bake.y = Math.max(0, Math.min(bh, (state.bake.y || 0) + dy));
-    updateCoordUI();
-    renderBakeCanvas();
-  };
-
-  if (els.bakeNudgeLeft) els.bakeNudgeLeft.addEventListener("click", () => applyNudge(-nudgeStep, 0));
-  if (els.bakeNudgeRight) els.bakeNudgeRight.addEventListener("click", () => applyNudge(nudgeStep, 0));
-  if (els.bakeNudgeUp) els.bakeNudgeUp.addEventListener("click", () => applyNudge(0, -nudgeStep));
-  if (els.bakeNudgeDown) els.bakeNudgeDown.addEventListener("click", () => applyNudge(0, nudgeStep));
-
-  // 3D Surface Dragging Toggle
-  state.bake.surfaceDragEnabled = true;
-  if (els.bake3dDragToggleBtn) {
-    els.bake3dDragToggleBtn.addEventListener("click", () => {
-      state.bake.surfaceDragEnabled = !(state.bake.surfaceDragEnabled !== false);
-      const isEnabled = state.bake.surfaceDragEnabled;
-      els.bake3dDragToggleBtn.classList.toggle("active", isEnabled);
-      if (els.bake3dDragToggleLabel) {
-        els.bake3dDragToggleLabel.textContent = isEnabled ? "3D Drag: ON" : "3D Drag: OFF";
-      }
-      showToast(isEnabled ? "3D Surface Dragging enabled! Drag directly on the 3D model." : "3D Surface Dragging paused.", "info");
-    });
+  if (els.bakeApplyBtn) {
+    els.bakeApplyBtn.addEventListener("click", () => applyBake());
   }
 
-  // Mode Switcher Buttons (3D / 2D / Split)
+  if (els.bakeResetBtn) {
+    els.bakeResetBtn.addEventListener("click", () => resetBake());
+  }
+
+  if (els.syncPwModelsBtn) {
+    els.syncPwModelsBtn.addEventListener("click", () => triggerSyncPw());
+  }
+
   if (els.bakeMode3DBtn) {
-    els.bakeMode3DBtn.addEventListener("click", () => {
-      if (typeof window.setStageMode === "function") window.setStageMode("3d");
-    });
+    els.bakeMode3DBtn.addEventListener("click", () => setBakeViewportMode("3d"));
   }
   if (els.bakeMode2DBtn) {
-    els.bakeMode2DBtn.addEventListener("click", () => {
-      if (typeof window.setStageMode === "function") window.setStageMode("2d");
-    });
+    els.bakeMode2DBtn.addEventListener("click", () => setBakeViewportMode("2d"));
   }
   if (els.bakeModeSplitBtn) {
-    els.bakeModeSplitBtn.addEventListener("click", () => {
-      if (typeof window.setStageMode === "function") window.setStageMode("split");
+    els.bakeModeSplitBtn.addEventListener("click", () => setBakeViewportMode("split"));
+  }
+
+  if (els.bake3dDragToggleBtn) {
+    els.bake3dDragToggleBtn.addEventListener("click", () => {
+      state.bake.allow3dDrag = !state.bake.allow3dDrag;
+      els.bake3dDragToggleBtn.classList.toggle("active", state.bake.allow3dDrag);
+      if (els.bake3dDragToggleLabel) {
+        els.bake3dDragToggleLabel.textContent = `Drag: ${state.bake.allow3dDrag ? "ON" : "OFF"}`;
+      }
+      showToast(`3D surface sticker dragging: ${state.bake.allow3dDrag ? "ENABLED" : "DISABLED"}`);
     });
-  }
-}
-
-export async function triggerSyncPw() {
-  const wep = state.currentWeapon;
-  const team = state.currentTeam;
-  showLoader(`Syncing P & W models for ${wep.toUpperCase()}...`);
-  try {
-    const res = await apiPost("/api/amxx/sync_pw", {
-      weapon: wep,
-      team: team,
-      auto_backup: true,
-    });
-    if (res.success) {
-      showToast(res.message || `Synchronized P/W models for ${wep.toUpperCase()}`, "success");
-      eventBus.emit("amxx:pwSynced", { weapon: wep, team: team, result: res });
-    } else {
-      showToast(res.error || "P/W Synchronization failed", "error");
-    }
-  } catch (err) {
-    showToast(`P/W Sync error: ${err.message}`, "error");
-  } finally {
-    hideLoader();
-  }
-}
-
-function applyBakePreset(preset) {
-  state.bake.preset = preset;
-  const bw = els.bakeCanvas ? els.bakeCanvas.width : 512;
-  const bh = els.bakeCanvas ? els.bakeCanvas.height : 512;
-
-  if (preset === "silencer") {
-    state.bake.x = Math.round(bw * 0.72);
-    state.bake.y = Math.round(bh * 0.35);
-  } else if (preset === "slide") {
-    state.bake.x = Math.round(bw * 0.45);
-    state.bake.y = Math.round(bh * 0.35);
-  } else if (preset === "wood") {
-    state.bake.x = Math.round(bw * 0.35);
-    state.bake.y = Math.round(bh * 0.47);
-  } else if (preset === "mag") {
-    state.bake.x = Math.round(bw * 0.60);
-    state.bake.y = Math.round(bh * 0.70);
-  } else if (preset === "stock") {
-    state.bake.x = Math.round(bw * 0.18);
-    state.bake.y = Math.round(bh * 0.45);
-  } else {
-    state.bake.x = Math.round(bw * 0.45);
-    state.bake.y = Math.round(bh * 0.45);
-  }
-  renderBakeCanvas();
-}
-
-function loadBakeStickerFromFile(file) {
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    loadBakeStickerFromUri(e.target.result, null);
-  };
-  reader.readAsDataURL(file);
-}
-
-export function loadBakeStickerFromUri(dataUri, path = null) {
-  state.bake.stickerBase64 = dataUri;
-  state.bake.stickerPath = path;
-  const img = new Image();
-  img.onload = () => {
-    state.bake.stickerImg = img;
-    renderBakeCanvas();
-    eventBus.emit("bake:stickerChanged", { previewUri: dataUri, path: path });
-    showToast("Sticker loaded onto canvas! Drag to place.", "info");
-  };
-  img.src = dataUri;
-}
-
-export function resetBake() {
-  state.bake.stickerImg = null;
-  state.bake.stickerBase64 = null;
-  state.bake.stickerPath = null;
-  renderBakeCanvas();
-  eventBus.emit("bake:stickerChanged", { previewUri: null, path: null });
-  showToast("Bake sticker cleared from canvas.", "info");
-}
-
-async function applyBake() {
-  if (!state.bake.stickerBase64 && !state.bake.stickerPath) {
-    showToast("Please choose or upload a sticker first.", "error");
-    return;
-  }
-
-  const skinIdx = els.bakeTargetSkin ? els.bakeTargetSkin.value : null;
-  if (!skinIdx) {
-    showToast("No target weapon skin texture selected.", "error");
-    return;
-  }
-
-  showLoader("Baking sticker onto weapon skin...");
-  try {
-    const payload = {
-      team: state.currentTeam,
-      weapon: state.currentWeapon,
-      texture_index: parseInt(skinIdx, 10),
-      preset: state.bake.preset,
-      coords: [Math.round(state.bake.x), Math.round(state.bake.y)],
-      scale: state.bake.scale,
-      rotation: state.bake.rotation,
-      scrape: (state.bake.scrape || 0) / 100.0,
-      fx: state.bake.fx || "matte",
-      chrome_effect: (els.bakeChromeEffect && els.bakeChromeEffect.value !== "matte") ? els.bakeChromeEffect.value : (state.bake.chrome_effect || null),
-    };
-    if (state.bake.stickerPath) {
-      payload.image_path = state.bake.stickerPath;
-    } else {
-      payload.image_base64 = state.bake.stickerBase64;
-    }
-
-    const res = await apiPost("/api/bake", payload);
-    showToast(res.message, "success");
-
-    // Clear sticker from memory to avoid double rendering
-    state.bake.stickerImg = null;
-    state.bake.stickerBase64 = null;
-    state.bake.stickerPath = null;
-    renderBakeCanvas();
-    eventBus.emit("bake:stickerChanged", { previewUri: null, path: null });
-
-    // Record action for Undo/Redo stack
-    const tex = state.modelData ? state.modelData.textures.find((t) => t.index === payload.texture_index) : null;
-    const texName = tex ? tex.name : "skin";
-
-    const actionTeam = state.currentTeam;
-    const actionWeapon = state.currentWeapon;
-
-    eventBus.emit("history:record", {
-      description: `Baked Sticker onto ${texName}`,
-      team: actionTeam,
-      weapon: actionWeapon,
-      undo: async () => {
-        await apiPost("/api/revert", {
-          team: actionTeam,
-          weapon: actionWeapon,
-          texture_index: payload.texture_index,
-          texture_name: texName,
-        });
-      },
-      redo: async () => {
-        await apiPost("/api/bake", payload);
-      },
-    });
-
-    eventBus.emit("model:reloadRequest");
-    eventBus.emit("3d:requestReload");
-  } catch (err) {
-    showToast(`Bake failed: ${err.message}`, "error");
-  } finally {
-    hideLoader();
   }
 }

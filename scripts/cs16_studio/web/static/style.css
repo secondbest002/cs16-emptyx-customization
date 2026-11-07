@@ -3050,7 +3050,7 @@ body.eyedropper-active .compare-stage {
 /* 8. Floating Studio Glass Capsule HUD */
 .floating-hud-capsule {
   position: absolute;
-  bottom: 16px;
+  bottom: 26px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -3062,7 +3062,7 @@ body.eyedropper-active .compare-stage {
   max-width: 95%;
   flex-wrap: nowrap;
   justify-content: center;
-  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.25s ease, bottom 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .floating-hud-capsule.is-dimmed {
