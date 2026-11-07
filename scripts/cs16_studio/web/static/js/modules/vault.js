@@ -10,6 +10,8 @@ import { loadActiveModel } from "../app.js";
 let vaultItems = [];
 let activeCategoryFilter = "all";
 let searchQuery = "";
+let activeLoadoutTeam = "ct";
+let loadoutPresets = [];
 
 export function initVaultModule() {
   const openVaultBtn = document.getElementById("openVaultBtn");
@@ -65,6 +67,68 @@ export function initVaultModule() {
       renderVaultCards();
     });
   });
+
+  // Team Loadout Presets UI (Phase 5)
+  const ctBtn = document.getElementById("vaultLoadoutCtBtn");
+  const tBtn = document.getElementById("vaultLoadoutTBtn");
+  const saveLoadoutBtn = document.getElementById("vaultSaveLoadoutBtn");
+  const importBtn = document.getElementById("vaultImportBtn");
+  const importInput = document.getElementById("vaultImportFileInput");
+  const vaultModalEl = document.getElementById("vaultModal");
+
+  if (ctBtn) {
+    ctBtn.addEventListener("click", () => {
+      ctBtn.classList.add("active");
+      if (tBtn) tBtn.classList.remove("active");
+      activeLoadoutTeam = "ct";
+      loadTeamLoadouts("ct");
+    });
+  }
+
+  if (tBtn) {
+    tBtn.addEventListener("click", () => {
+      tBtn.classList.add("active");
+      if (ctBtn) ctBtn.classList.remove("active");
+      activeLoadoutTeam = "t";
+      loadTeamLoadouts("t");
+    });
+  }
+
+  if (saveLoadoutBtn) {
+    saveLoadoutBtn.addEventListener("click", () => saveCurrentTeamLoadout());
+  }
+
+  if (importBtn && importInput) {
+    importBtn.addEventListener("click", () => importInput.click());
+    importInput.addEventListener("change", async (e) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        await handleImportSkinFile(file);
+        importInput.value = "";
+      }
+    });
+  }
+
+  // Drag-and-drop .cs16skin into vault modal
+  if (vaultModalEl) {
+    vaultModalEl.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      vaultModalEl.classList.add("vault-dragover");
+    });
+    vaultModalEl.addEventListener("dragleave", (e) => {
+      if (!e.relatedTarget || !vaultModalEl.contains(e.relatedTarget)) {
+        vaultModalEl.classList.remove("vault-dragover");
+      }
+    });
+    vaultModalEl.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      vaultModalEl.classList.remove("vault-dragover");
+      const file = e.dataTransfer?.files?.[0];
+      if (file && (file.name.endsWith(".cs16skin") || file.name.endsWith(".zip"))) {
+        await handleImportSkinFile(file);
+      }
+    });
+  }
 
   // Hotkey: Ctrl+Shift+S for Quick Save to Vault
   window.addEventListener("keydown", (e) => {
@@ -182,7 +246,10 @@ export async function openVaultModal() {
   const modal = document.getElementById("vaultModal");
   if (!modal) return;
   modal.classList.remove("hidden");
-  await loadVaultItems();
+  await Promise.all([
+    loadVaultItems(),
+    loadTeamLoadouts(activeLoadoutTeam),
+  ]);
 }
 
 export function closeVaultModal() {
@@ -298,6 +365,9 @@ function renderVaultCards() {
           <button type="button" class="btn btn-xs btn-icon btn-sync-glove" data-action="sync-glove" title="Synchronize current active gloves to this skin (Mitigate glove clash)">
             <svg class="glyph glyph-xs text-cyan"><use href="#glyph-glove"></use></svg>
           </button>
+          <button type="button" class="btn btn-xs btn-icon btn-export" data-action="export" title="Export portable .cs16skin bundle">
+            <svg class="glyph glyph-xs text-amber"><use href="#glyph-download"></use></svg>
+          </button>
           <button type="button" class="btn btn-xs btn-icon btn-inspect" data-action="inspect" title="Inspect model in 3D Viewport">
             <svg class="glyph glyph-xs"><use href="#glyph-eye"></use></svg>
           </button>
@@ -324,6 +394,11 @@ function renderVaultCards() {
     card.querySelector('[data-action="equip-t"]')?.addEventListener("click", () => equipVaultItem(id, "t"));
     // Sync Gloves
     card.querySelector('[data-action="sync-glove"]')?.addEventListener("click", () => syncItemGloves(id));
+    // Export .cs16skin
+    card.querySelector('[data-action="export"]')?.addEventListener("click", () => {
+      window.location.href = `/api/vault/export_skin?id=${encodeURIComponent(id)}`;
+      showToast(`Exporting .cs16skin bundle for "${item.name}"...`, "info");
+    });
     // Inspect 3D
     card.querySelector('[data-action="inspect"]')?.addEventListener("click", () => inspectVaultItem(item));
     // Toggle AMXX
@@ -452,6 +527,155 @@ async function deleteVaultItem(itemId, name) {
     }
   } catch (err) {
     showToast(`Delete Error: ${err.message}`, "error");
+  } finally {
+    hideLoader();
+  }
+}
+
+
+// =============================================================================
+// TEAM LOADOUTS & PORTABLE BUNDLES ENGINE (Phase 5)
+// =============================================================================
+
+export async function loadTeamLoadouts(team = "ct") {
+  const container = document.getElementById("vaultLoadoutsList");
+  if (!container) return;
+
+  try {
+    const res = await apiGet(`/api/vault/loadouts?team=${encodeURIComponent(team)}`);
+    loadoutPresets = res.loadouts || [];
+    renderTeamLoadouts(loadoutPresets, team);
+  } catch (err) {
+    container.innerHTML = `<span class="text-crimson" style="font-size: 0.8rem;">Failed to load loadouts: ${err.message}</span>`;
+  }
+}
+
+function renderTeamLoadouts(presets, team) {
+  const container = document.getElementById("vaultLoadoutsList");
+  if (!container) return;
+
+  if (!presets || presets.length === 0) {
+    container.innerHTML = `<span class="text-muted" style="font-size: 0.8rem;">No saved ${team.toUpperCase()} presets. Click <strong>"Save Current Loadout"</strong> to create one.</span>`;
+    return;
+  }
+
+  container.innerHTML = presets.map((p) => {
+    return `
+      <div class="loadout-chip" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 3px 8px; font-size: 0.8rem;">
+        <span style="font-weight: 600; color: #f8fafc;">${p.name}</span>
+        <span style="font-size: 0.72rem; color: var(--accent-cyan);">(${p.weapon_count || Object.keys(p.slots || {}).length} weapons)</span>
+        <button type="button" class="btn btn-xs btn-emerald" data-loadout-apply="${p.id}" style="padding: 1px 6px; font-size: 0.7rem; height: 20px;" title="Equip this full loadout">
+          <svg class="glyph glyph-xs"><use href="#glyph-check"></use></svg>
+          <span>Equip</span>
+        </button>
+        <button type="button" class="btn btn-xs btn-icon" data-loadout-delete="${p.id}" style="padding: 1px 4px; height: 20px;" title="Delete preset">
+          <svg class="glyph glyph-xs text-crimson"><use href="#glyph-trash"></use></svg>
+        </button>
+      </div>
+    `;
+  }).join("");
+
+  // Attach handlers
+  container.querySelectorAll("[data-loadout-apply]").forEach((btn) => {
+    const pid = btn.getAttribute("data-loadout-apply");
+    btn.addEventListener("click", () => applyTeamLoadout(pid));
+  });
+
+  container.querySelectorAll("[data-loadout-delete]").forEach((btn) => {
+    const pid = btn.getAttribute("data-loadout-delete");
+    btn.addEventListener("click", () => deleteTeamLoadout(pid));
+  });
+}
+
+async function saveCurrentTeamLoadout() {
+  const defaultName = `${activeLoadoutTeam.toUpperCase()} Theme Loadout`;
+  const name = prompt(`Enter a name for this ${activeLoadoutTeam.toUpperCase()} loadout preset:`, defaultName);
+  if (!name || !name.trim()) return;
+
+  showLoader(`Saving ${activeLoadoutTeam.toUpperCase()} loadout preset...`);
+  try {
+    const res = await apiPost("/api/vault/loadout_save", {
+      team: activeLoadoutTeam,
+      name: name.trim(),
+    });
+    if (res.success) {
+      showToast(res.message || "Saved loadout preset!", "success");
+      await loadTeamLoadouts(activeLoadoutTeam);
+    } else {
+      showToast(res.error || "Failed to save loadout.", "error");
+    }
+  } catch (err) {
+    showToast(`Loadout Save Error: ${err.message}`, "error");
+  } finally {
+    hideLoader();
+  }
+}
+
+async function applyTeamLoadout(presetId) {
+  showLoader("Applying full team loadout with glove sync...");
+  try {
+    const res = await apiPost("/api/vault/loadout_apply", {
+      preset_id: presetId,
+    });
+    if (res.success) {
+      showToast(res.message || "Loadout equipped!", "success");
+      await Promise.all([
+        loadVaultItems(),
+        loadTeamLoadouts(activeLoadoutTeam),
+      ]);
+      await loadActiveModel();
+    } else {
+      showToast(res.error || "Failed to apply loadout.", "error");
+    }
+  } catch (err) {
+    showToast(`Loadout Apply Error: ${err.message}`, "error");
+  } finally {
+    hideLoader();
+  }
+}
+
+async function deleteTeamLoadout(presetId) {
+  if (!confirm("Are you sure you want to delete this loadout preset?")) return;
+
+  try {
+    const res = await apiPost("/api/vault/loadout_delete", { preset_id: presetId });
+    if (res.success) {
+      showToast(res.message || "Deleted loadout preset.", "info");
+      await loadTeamLoadouts(activeLoadoutTeam);
+    } else {
+      showToast(res.error || "Failed to delete loadout.", "error");
+    }
+  } catch (err) {
+    showToast(`Delete Error: ${err.message}`, "error");
+  }
+}
+
+async function handleImportSkinFile(file) {
+  showLoader(`Importing bundle "${file.name}"...`);
+  try {
+    const reader = new FileReader();
+    const b64Promise = new Promise((resolve, reject) => {
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const b64 = await b64Promise;
+    const res = await apiPost("/api/vault/import_skin", {
+      bundle_b64: b64,
+      team: state.currentTeam,
+      register_amxx: false,
+      equip_now: false,
+    });
+
+    if (res.success) {
+      showToast(res.message || `Imported "${res.name}" into Vault!`, "success");
+      await loadVaultItems();
+    } else {
+      showToast(res.error || "Import failed.", "error");
+    }
+  } catch (err) {
+    showToast(`Import Error: ${err.message}`, "error");
   } finally {
     hideLoader();
   }

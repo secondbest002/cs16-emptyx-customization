@@ -19,7 +19,9 @@ import os
 from pathlib import Path
 import re
 import shutil
+import struct
 from typing import Any, Dict, List, Optional, Tuple, Union
+import zipfile
 from PIL import Image
 
 from .config_manager import config
@@ -52,6 +54,24 @@ from .image_pipeline import quantize_goldsrc
 
 INVENTORY_SUBDIR = Path("cstrike") / "models" / "custom_skins" / "inventory"
 ACTIVE_EQUIPPED_FILE = ".active_equipped.json"
+LOADOUT_PRESETS_SUBDIR = Path("cstrike") / "models" / "custom_skins" / "inventory" / ".loadout_presets"
+BUNDLES_SUBDIR = Path("cstrike") / "models" / "custom_skins" / "inventory" / "bundles"
+
+
+def get_loadout_presets_dir(root_dir: Optional[Union[str, Path]] = None) -> Path:
+    """Returns and ensures the team loadout presets directory exists."""
+    root = Path(root_dir).resolve() if root_dir else config.get_game_root()
+    p_dir = root / LOADOUT_PRESETS_SUBDIR
+    p_dir.mkdir(parents=True, exist_ok=True)
+    return p_dir
+
+
+def get_bundles_dir(root_dir: Optional[Union[str, Path]] = None) -> Path:
+    """Returns and ensures the bundles directory exists."""
+    root = Path(root_dir).resolve() if root_dir else config.get_game_root()
+    b_dir = root / BUNDLES_SUBDIR
+    b_dir.mkdir(parents=True, exist_ok=True)
+    return b_dir
 
 
 def get_inventory_dir(root_dir: Optional[Union[str, Path]] = None) -> Path:
@@ -393,9 +413,9 @@ def save_to_inventory(
             pass
 
     # Relative paths for CS 1.6 / AMXX
-    rel_v = str(dest_v_path.relative_to(cstrike_dir)).replace("\\", "/") if cstrike_dir in dest_v_path.parents else str(dest_v_path.relative_to(root)).replace("\\", "/")
-    rel_p = str(dest_p_path.relative_to(cstrike_dir)).replace("\\", "/") if dest_p_path and dest_p_path.is_file() and cstrike_dir in dest_p_path.parents else ""
-    rel_w = str(dest_w_path.relative_to(cstrike_dir)).replace("\\", "/") if dest_w_path and dest_w_path.is_file() and cstrike_dir in dest_w_path.parents else ""
+        rel_v = dest_v_path.relative_to(cstrike_dir).as_posix() if cstrike_dir in dest_v_path.parents else dest_v_path.relative_to(root).as_posix()
+        rel_p = dest_p_path.relative_to(cstrike_dir).as_posix() if dest_p_path and cstrike_dir in dest_p_path.parents else ""
+        rel_w = dest_w_path.relative_to(cstrike_dir).as_posix() if dest_w_path and cstrike_dir in dest_w_path.parents else ""
 
     manifest = {
         "id": slug,
@@ -904,3 +924,352 @@ def toggle_amxx_registration(
         "amxx_registered": manifest["amxx_registered"],
         "message": f"Updated AMXX registration for '{name}': {'Enabled' if enable else 'Disabled'}.",
     }
+
+
+
+# =============================================================================
+# TEAM LOADOUT PRESETS ENGINE (Phase 5)
+# =============================================================================
+
+def save_team_loadout_preset(
+    team: str,
+    name: str,
+    root_dir: Optional[Union[str, Path]] = None,
+) -> dict:
+    """
+    Saves the team's entire active loadout (all weapons & knives) into a loadout preset.
+    """
+    root = Path(root_dir).resolve() if root_dir else config.get_game_root()
+    presets_dir = get_loadout_presets_dir(root)
+    clean_team = team.lower().strip()
+    clean_name = name.strip()
+    if not clean_name:
+        raise ValueError("Loadout preset name cannot be empty.")
+
+    slug = slugify(f"{clean_team}_{clean_name}")
+    loadout_path = root / ACTIVE_LOADOUT_REL
+    from .amxx_manager import parse_active_loadout
+    active_loadout = parse_active_loadout(loadout_path) if loadout_path.is_file() else {"ct": {}, "t": {}}
+    active_equipped = _load_active_equipped(root)
+
+    team_loadout = active_loadout.get(clean_team, {})
+    team_equipped = active_equipped.get(clean_team, {})
+
+    # Combine into unified preset items map: slot -> { "item_id": ..., "model_path": ... }
+    slots_map = {}
+    for slot, model_rel in team_loadout.items():
+        eq_id = team_equipped.get(slot)
+        slots_map[slot] = {
+            "slot": slot,
+            "item_id": eq_id,
+            "model_path": model_rel,
+        }
+
+    preset = {
+        "id": slug,
+        "name": clean_name,
+        "team": clean_team,
+        "created_at": datetime.now().isoformat(),
+        "weapon_count": len(slots_map),
+        "slots": slots_map,
+    }
+
+    preset_file = presets_dir / f"{slug}.json"
+    with open(preset_file, "w", encoding="utf-8") as f:
+        json.dump(preset, f, indent=2)
+
+    return {
+        "success": True,
+        "id": slug,
+        "name": clean_name,
+        "team": clean_team,
+        "weapon_count": len(slots_map),
+        "preset": preset,
+        "message": f"Saved {clean_team.upper()} loadout preset '{clean_name}' ({len(slots_map)} weapons).",
+    }
+
+
+def list_team_loadout_presets(
+    team: Optional[str] = None,
+    root_dir: Optional[Union[str, Path]] = None,
+) -> List[dict]:
+    """Lists saved team loadout presets, optionally filtered by team."""
+    root = Path(root_dir).resolve() if root_dir else config.get_game_root()
+    presets_dir = get_loadout_presets_dir(root)
+    results = []
+    clean_team = team.lower().strip() if team and team.lower() in ("ct", "t") else None
+
+    for f in sorted(presets_dir.glob("*.json")):
+        try:
+            with open(f, "r", encoding="utf-8") as fp:
+                data = json.load(fp)
+            if clean_team and data.get("team") != clean_team:
+                continue
+            results.append(data)
+        except Exception:
+            continue
+
+    return sorted(results, key=lambda x: x.get("created_at", ""), reverse=True)
+
+
+def apply_team_loadout_preset(
+    preset_id: str,
+    root_dir: Optional[Union[str, Path]] = None,
+) -> dict:
+    """
+    Applies a saved team loadout preset across all stored weapon slots.
+    """
+    root = Path(root_dir).resolve() if root_dir else config.get_game_root()
+    presets_dir = get_loadout_presets_dir(root)
+    clean_id = preset_id.strip().lower()
+    preset_file = presets_dir / f"{clean_id}.json"
+    if not preset_file.is_file():
+        matched = None
+        for f in presets_dir.glob("*.json"):
+            try:
+                with open(f, "r", encoding="utf-8") as fp:
+                    d = json.load(fp)
+                if d.get("id") == clean_id:
+                    matched = d
+                    break
+            except Exception:
+                continue
+        if not matched:
+            raise FileNotFoundError(f"Loadout preset '{preset_id}' not found.")
+        preset = matched
+    else:
+        with open(preset_file, "r", encoding="utf-8") as fp:
+            preset = json.load(fp)
+
+    team = preset.get("team", "ct")
+    slots = preset.get("slots", {})
+    equipped_count = 0
+    failed_slots = []
+
+    for slot, slot_data in slots.items():
+        item_id = slot_data.get("item_id")
+        model_path = slot_data.get("model_path")
+
+        applied = False
+        if item_id:
+            try:
+                res = equip_inventory_skin(item_id, team=team, sync_active_glove=True, root_dir=root)
+                if res.get("success"):
+                    applied = True
+            except Exception:
+                pass
+
+        if not applied and model_path:
+            try:
+                set_active_loadout(team=team, weapon=slot, model_path=model_path, root_dir=root)
+                applied = True
+            except Exception as e:
+                failed_slots.append({"slot": slot, "error": str(e)})
+
+        if applied:
+            equipped_count += 1
+
+    return {
+        "success": True,
+        "id": preset.get("id"),
+        "name": preset.get("name"),
+        "team": team,
+        "equipped_count": equipped_count,
+        "failed_slots": failed_slots,
+        "message": f"Successfully applied {team.upper()} loadout '{preset.get('name')}' ({equipped_count} weapons equipped).",
+    }
+
+
+def delete_team_loadout_preset(
+    preset_id: str,
+    root_dir: Optional[Union[str, Path]] = None,
+) -> dict:
+    """Deletes a team loadout preset file."""
+    root = Path(root_dir).resolve() if root_dir else config.get_game_root()
+    presets_dir = get_loadout_presets_dir(root)
+    clean_id = preset_id.strip().lower()
+    preset_file = presets_dir / f"{clean_id}.json"
+    if preset_file.is_file():
+        preset_file.unlink()
+        return {"success": True, "message": f"Deleted loadout preset '{preset_id}'."}
+
+    for f in presets_dir.glob("*.json"):
+        try:
+            with open(f, "r", encoding="utf-8") as fp:
+                d = json.load(fp)
+            if d.get("id") == clean_id:
+                f.unlink()
+                return {"success": True, "message": f"Deleted loadout preset '{preset_id}'."}
+        except Exception:
+            continue
+    return {"success": False, "error": f"Loadout preset '{preset_id}' not found."}
+
+
+# =============================================================================
+# PORTABLE VAULT BUNDLES (.cs16skin) ENGINE (Phase 5)
+# =============================================================================
+
+def export_skin_bundle(
+    item_id_or_path: str,
+    output_path: Optional[Union[str, Path]] = None,
+    root_dir: Optional[Union[str, Path]] = None,
+) -> Path:
+    """
+    Exports a skin from the inventory vault into a portable .cs16skin bundle (ZIP archive).
+    Includes manifest.json, v_*.mdl, p_*.mdl, w_*.mdl, thumb.png, and slot metadata.
+    """
+    root = Path(root_dir).resolve() if root_dir else config.get_game_root()
+    found = find_inventory_item(item_id_or_path, root_dir=root)
+    if not found:
+        raise FileNotFoundError(f"Inventory item '{item_id_or_path}' not found in vault.")
+
+    item_dir, manifest = found
+    item_id = manifest.get("id", item_dir.name)
+
+    if output_path:
+        out_file = Path(output_path).resolve()
+    else:
+        bundles_dir = get_bundles_dir(root)
+        out_file = bundles_dir / f"{item_id}.cs16skin"
+
+    out_file.parent.mkdir(parents=True, exist_ok=True)
+
+    with zipfile.ZipFile(out_file, "w", zipfile.ZIP_DEFLATED) as zf:
+        for f in sorted(item_dir.iterdir()):
+            if f.is_file() and not f.name.endswith(".tmp"):
+                zf.write(f, arcname=f.name)
+
+    return out_file
+
+
+def import_skin_bundle(
+    bundle_source: Union[str, Path, bytes, io.BytesIO],
+    register_amxx: bool = False,
+    equip_now: bool = False,
+    team: Optional[str] = None,
+    root_dir: Optional[Union[str, Path]] = None,
+) -> dict:
+    """
+    Imports a portable .cs16skin bundle into the inventory vault.
+    Validates GoldSrc IDST v10 binary integrity and registers with AMXX / loadout if requested.
+    """
+    root = Path(root_dir).resolve() if root_dir else config.get_game_root()
+    inv_base = get_inventory_dir(root)
+    cstrike_dir = root / "cstrike"
+
+    if isinstance(bundle_source, (bytes, bytearray)):
+        zf = zipfile.ZipFile(io.BytesIO(bundle_source), "r")
+    elif isinstance(bundle_source, io.BytesIO):
+        zf = zipfile.ZipFile(bundle_source, "r")
+    else:
+        src_path = Path(bundle_source).resolve()
+        if not src_path.is_file():
+            raise FileNotFoundError(f"Skin bundle file not found: {src_path}")
+        zf = zipfile.ZipFile(src_path, "r")
+
+    try:
+        namelist = zf.namelist()
+        if "manifest.json" not in namelist:
+            raise ValueError("Invalid .cs16skin bundle: missing 'manifest.json'.")
+
+        with zf.open("manifest.json") as fp:
+            manifest_data = json.load(fp)
+
+        # Validate viewmodel
+        v_candidates = [n for n in namelist if n.startswith("v_") and n.endswith(".mdl")]
+        if not v_candidates:
+            v_name = Path(manifest_data.get("v_model", "")).name
+            if v_name in namelist:
+                v_candidates = [v_name]
+
+        if not v_candidates:
+            raise ValueError("Invalid .cs16skin bundle: no viewmodel (v_*.mdl) found.")
+
+        v_arcname = v_candidates[0]
+        v_bytes = zf.read(v_arcname)
+        if len(v_bytes) < 188:
+            raise ValueError("Invalid .cs16skin bundle: viewmodel file is corrupted (too small).")
+        magic, ver = struct.unpack_from("<4sI", v_bytes, 0)
+        if magic != b"IDST" or ver != 10:
+            raise ValueError(f"Invalid GoldSrc StudioModel format: magic={magic}, ver={ver} (expected IDST v10).")
+
+        weapon_key = _clean_weapon_key(manifest_data.get("weapon", "usp"))
+        is_knife = manifest_data.get("is_knife", False) or is_knife_model(weapon_key)
+        category_key = "knife" if is_knife else weapon_key
+        name = manifest_data.get("name", "Imported Skin").strip()
+        slug = slugify(f"{weapon_key}_{name}")
+
+        item_dir = inv_base / category_key / slug
+        counter = 1
+        orig_slug = slug
+        while item_dir.exists():
+            counter += 1
+            slug = f"{orig_slug}_{counter}"
+            item_dir = inv_base / category_key / slug
+
+        item_dir.mkdir(parents=True, exist_ok=True)
+
+        for member in zf.infolist():
+            member_name = Path(member.filename).name
+            if not member_name or member_name.startswith("."):
+                continue
+            with zf.open(member) as sfp, open(item_dir / member_name, "wb") as dfp:
+                shutil.copyfileobj(sfp, dfp)
+
+        dest_v_path = item_dir / v_arcname
+        dest_p_name = f"p_{weapon_key}.mdl" if not is_knife else "p_knife.mdl"
+        dest_w_name = f"w_{weapon_key}.mdl" if not is_knife else "w_knife.mdl"
+        dest_p_path = (item_dir / dest_p_name) if (item_dir / dest_p_name).is_file() else None
+        dest_w_path = (item_dir / dest_w_name) if (item_dir / dest_w_name).is_file() else None
+
+        rel_v = dest_v_path.relative_to(cstrike_dir).as_posix() if cstrike_dir in dest_v_path.parents else dest_v_path.relative_to(root).as_posix()
+        rel_p = dest_p_path.relative_to(cstrike_dir).as_posix() if dest_p_path and cstrike_dir in dest_p_path.parents else ""
+        rel_w = dest_w_path.relative_to(cstrike_dir).as_posix() if dest_w_path and cstrike_dir in dest_w_path.parents else ""
+
+        manifest_data["id"] = slug
+        manifest_data["v_model"] = rel_v
+        manifest_data["p_model"] = rel_p
+        manifest_data["w_model"] = rel_w
+        if team:
+            manifest_data["team"] = team.lower()
+
+        with open(item_dir / "manifest.json", "w", encoding="utf-8") as fp:
+            json.dump(manifest_data, fp, indent=2)
+
+        item_team = manifest_data.get("team", team or "ct")
+        if register_amxx:
+            add_to_skin_inventory_ini(
+                display_name=name,
+                v_model_rel=rel_v,
+                p_model_rel=rel_p,
+                w_model_rel=rel_w,
+                team=item_team,
+                weapon_key=weapon_key,
+                root_dir=root,
+            )
+            manifest_data["amxx_registered"] = True
+
+        equip_res = None
+        if equip_now:
+            equip_res = equip_inventory_skin(
+                item_id_or_path=slug,
+                team=item_team,
+                sync_active_glove=True,
+                root_dir=root,
+            )
+
+        return {
+            "success": True,
+            "id": slug,
+            "name": name,
+            "weapon": weapon_key,
+            "category": category_key,
+            "is_knife": is_knife,
+            "team": item_team,
+            "folder_path": str(item_dir),
+            "v_model": rel_v,
+            "equip_result": equip_res,
+            "message": f"Successfully imported '{name}' into Skin Vault.",
+        }
+    finally:
+        zf.close()

@@ -2474,15 +2474,40 @@
             <span class="dock-count-badge" id="vaultTotalCountBadge" style="background: rgba(6,182,212,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); font-size: 0.75rem; padding: 2px 8px; border-radius: 999px;">0 SKINS</span>
           </div>
           <div style="display: flex; align-items: center; gap: 8px;">
+            <input type="file" id="vaultImportFileInput" accept=".cs16skin,.zip" style="display: none;">
+            <button type="button" id="vaultImportBtn" class="btn btn-xs btn-secondary" title="Import portable .cs16skin bundle into vault">
+              <svg class="glyph glyph-xs text-amber"><use href="#glyph-download"></use></svg>
+              <span>Import .cs16skin</span>
+            </button>
             <button type="button" id="vaultSyncGlovesAllBtn" class="btn btn-xs btn-secondary" title="Synchronize current active gloves across all saved skins in vault">
               <svg class="glyph glyph-xs text-cyan"><use href="#glyph-glove"></use></svg>
-              <span>Sync Active Gloves to Entire Vault</span>
+              <span>Sync Gloves</span>
             </button>
             <button type="button" id="vaultModalCloseBtn" class="modal-close-btn">&times;</button>
           </div>
         </div>
 
         <div class="modal-body" style="padding-top: 14px;">
+          <!-- Team Loadouts Presets Bar (Phase 5) -->
+          <div class="vault-loadouts-bar" id="vaultLoadoutsBar" style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-weight: 700; font-size: 0.85rem; color: var(--accent-gold); letter-spacing: 0.5px;">TEAM LOADOUTS</span>
+                <div class="drawer-pills" style="display: flex; gap: 4px;">
+                  <button type="button" class="filter-pill active" id="vaultLoadoutCtBtn" style="padding: 2px 8px; font-size: 0.75rem;">CT Loadouts</button>
+                  <button type="button" class="filter-pill" id="vaultLoadoutTBtn" style="padding: 2px 8px; font-size: 0.75rem;">T Loadouts</button>
+                </div>
+              </div>
+              <button type="button" id="vaultSaveLoadoutBtn" class="btn btn-xs btn-inject" style="height: 26px; padding: 0 10px;">
+                <svg class="glyph glyph-xs"><use href="#glyph-save"></use></svg>
+                <span>Save Current Loadout</span>
+              </button>
+            </div>
+            <div id="vaultLoadoutsList" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center; min-height: 28px;">
+              <span class="text-muted" style="font-size: 0.8rem;">Loading loadout presets...</span>
+            </div>
+          </div>
+
           <!-- Controls Bar: Search & Category Filters -->
           <div class="vault-controls-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 12px; flex-wrap: wrap;">
             <div class="vault-filters drawer-pills" style="display: flex; gap: 6px; flex-wrap: wrap;">

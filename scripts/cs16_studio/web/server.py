@@ -120,6 +120,12 @@ from ..inventory_manager import (
     sync_gloves_to_inventory,
     delete_inventory_skin,
     toggle_amxx_registration,
+    save_team_loadout_preset,
+    list_team_loadout_presets,
+    apply_team_loadout_preset,
+    delete_team_loadout_preset,
+    export_skin_bundle,
+    import_skin_bundle,
 )
 from ..sleeve_injector import (
     SLEEVE_PRESETS,
@@ -321,6 +327,44 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
             try:
                 items = list_inventory(weapon=weapon_f, team=team_f, root_dir=self.workspace_root)
                 self._send_json({"success": True, "count": len(items), "items": items})
+            except Exception as e:
+                self._send_json({"success": False, "error": str(e)}, status=500)
+            return
+
+        elif path == "/api/vault/loadouts":
+            team_f = query.get("team", [None])[0]
+            try:
+                loadouts = list_team_loadout_presets(team=team_f, root_dir=self.workspace_root)
+                self._send_json({"success": True, "count": len(loadouts), "loadouts": loadouts})
+            except Exception as e:
+                self._send_json({"success": False, "error": str(e)}, status=500)
+            return
+
+        elif path == "/api/vault/export_skin":
+            item_id = query.get("id", [None])[0]
+            fmt = query.get("format", ["binary"])[0]
+            if not item_id:
+                self._send_json({"success": False, "error": "Query param 'id' is required."}, status=400)
+                return
+            try:
+                bundle_path = export_skin_bundle(item_id, root_dir=self.workspace_root)
+                if fmt == "b64":
+                    with open(bundle_path, "rb") as fp:
+                        b64 = base64.b64encode(fp.read()).decode("ascii")
+                    self._send_json({
+                        "success": True,
+                        "filename": bundle_path.name,
+                        "bundle_b64": b64,
+                    })
+                else:
+                    with open(bundle_path, "rb") as fp:
+                        data = fp.read()
+                    self.send_response(HTTPStatus.OK)
+                    self.send_header("Content-Type", "application/octet-stream")
+                    self.send_header("Content-Disposition", f'attachment; filename="{bundle_path.name}"')
+                    self.send_header("Content-Length", str(len(data)))
+                    self.end_headers()
+                    self.wfile.write(data)
             except Exception as e:
                 self._send_json({"success": False, "error": str(e)}, status=500)
             return
@@ -2349,6 +2393,63 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                     return
                 res = toggle_amxx_registration(item_id, enable=enable, root_dir=self.workspace_root)
                 self._send_json(res)
+                return
+
+            elif path == "/api/vault/loadout_save":
+                team = req_data.get("team", "ct")
+                name = req_data.get("name", "Team Loadout")
+                try:
+                    res = save_team_loadout_preset(team=team, name=name, root_dir=self.workspace_root)
+                    self._send_json(res)
+                except Exception as e:
+                    self._send_json({"success": False, "error": str(e)}, status=400)
+                return
+
+            elif path == "/api/vault/loadout_apply":
+                preset_id = req_data.get("preset_id") or req_data.get("id")
+                if not preset_id:
+                    self._send_json({"success": False, "error": "preset_id is required."}, status=400)
+                    return
+                try:
+                    res = apply_team_loadout_preset(preset_id=preset_id, root_dir=self.workspace_root)
+                    self._send_json(res)
+                except Exception as e:
+                    self._send_json({"success": False, "error": str(e)}, status=400)
+                return
+
+            elif path == "/api/vault/loadout_delete":
+                preset_id = req_data.get("preset_id") or req_data.get("id")
+                if not preset_id:
+                    self._send_json({"success": False, "error": "preset_id is required."}, status=400)
+                    return
+                try:
+                    res = delete_team_loadout_preset(preset_id=preset_id, root_dir=self.workspace_root)
+                    self._send_json(res)
+                except Exception as e:
+                    self._send_json({"success": False, "error": str(e)}, status=400)
+                return
+
+            elif path == "/api/vault/import_skin":
+                bundle_b64 = req_data.get("bundle_b64") or req_data.get("bundle")
+                if not bundle_b64:
+                    self._send_json({"success": False, "error": "bundle_b64 is required."}, status=400)
+                    return
+                try:
+                    raw_b64 = bundle_b64.split(",", 1)[1] if "," in bundle_b64 else bundle_b64
+                    bundle_bytes = base64.b64decode(raw_b64)
+                    register_amxx = _safe_bool(req_data.get("register_amxx"), False)
+                    equip_now = _safe_bool(req_data.get("equip_now"), False)
+                    team = req_data.get("team")
+                    res = import_skin_bundle(
+                        bundle_source=bundle_bytes,
+                        register_amxx=register_amxx,
+                        equip_now=equip_now,
+                        team=team,
+                        root_dir=self.workspace_root,
+                    )
+                    self._send_json(res)
+                except Exception as e:
+                    self._send_json({"success": False, "error": str(e)}, status=400)
                 return
 
             self._send_json({"success": False, "error": "Endpoint not found"}, status=404)
