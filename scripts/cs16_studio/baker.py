@@ -5,7 +5,7 @@ Allows placing transparent PNG stickers directly onto weapon surfaces
 """
 
 from pathlib import Path
-from typing import Dict, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter
 
@@ -170,4 +170,152 @@ def bake_sticker_onto_texture(
     pix_bytes, pal_bytes = quantize_goldsrc(composite, is_masked=False)
     payload = pix_bytes + pal_bytes
 
+    return payload, composite
+
+
+def transform_sticker_layer(
+    sticker_image: Union[str, Path, bytes, Image.Image],
+    base_w: int,
+    base_h: int,
+    scale: float = 1.0,
+    rotation: float = 0.0,
+    scrape: float = 0.0,
+    opacity: float = 1.0,
+    chrome_effect: Optional[str] = None,
+) -> Image.Image:
+    """
+    Transforms a single sticker: scales relative to canvas dimensions, applies scrape,
+    rotates, optionally applies chrome effect, and adjusts opacity.
+    """
+    sticker_rgba = load_image(sticker_image).convert("RGBA")
+
+    if scrape > 0:
+        from .sticker_scraper import apply_sticker_scraping
+        sticker_rgba = apply_sticker_scraping(sticker_rgba, scrape_percent=scrape)
+
+    base_dim = max(8, int(round(base_w * 0.25 * max(0.05, float(scale)))))
+    orig_sw, orig_sh = sticker_rgba.width, sticker_rgba.height
+    aspect = orig_sw / float(orig_sh) if orig_sh > 0 else 1.0
+
+    if aspect >= 1.0:
+        target_sw = base_dim
+        target_sh = max(8, int(round(target_sw / aspect)))
+    else:
+        target_sh = base_dim
+        target_sw = max(8, int(round(target_sh * aspect)))
+
+    scaled = sticker_rgba.resize((target_sw, target_sh), Image.Resampling.LANCZOS)
+
+    if rotation % 360 != 0:
+        scaled = scaled.rotate(-rotation, resample=Image.Resampling.BICUBIC, expand=True)
+
+    if chrome_effect:
+        from .chrome_injector import generate_chrome_texture
+        try:
+            chrome_img = generate_chrome_texture(
+                preset=chrome_effect, width=scaled.width, height=scaled.height
+            )
+            ch_arr = np.array(chrome_img.convert("RGBA"), dtype=np.float32)
+            st_arr = np.array(scaled, dtype=np.float32)
+            shine = (ch_arr[:, :, :3] / 255.0) * 0.45
+            st_arr[:, :, :3] = np.clip(st_arr[:, :, :3] * (1.0 + shine), 0, 255)
+            scaled = Image.fromarray(st_arr.astype(np.uint8), mode="RGBA")
+        except Exception:
+            pass
+
+    if opacity < 0.999:
+        op = max(0.0, min(1.0, float(opacity)))
+        r, g, b, a = scaled.split()
+        a = a.point(lambda p: int(round(p * op)))
+        scaled = Image.merge("RGBA", (r, g, b, a))
+
+    return scaled
+
+
+def composite_multi_stickers(
+    base_image: Union[str, Path, bytes, Image.Image],
+    layers: List[Dict[str, Any]],
+    weapon_key: str = "generic",
+) -> Image.Image:
+    """
+    Composites multiple free-form sticker layers onto the base texture in 32-bit RGBA space.
+    Each layer is a dict with:
+        image: str, Path, bytes, or Image
+        x, y: center coordinates (int)
+        scale: float (default 1.0)
+        rotation: float (degrees, default 0.0)
+        scrape: float (0-100%, default 0.0)
+        opacity: float (0.0-1.0, default 1.0)
+        chrome_effect: optional str preset
+        visible: bool (default True)
+        z_index: int (default 0)
+    """
+    base_rgba = load_image(base_image).convert("RGBA")
+    bw, bh = base_rgba.width, base_rgba.height
+    composite = base_rgba.copy()
+
+    sorted_layers = sorted(layers, key=lambda l: l.get("z_index", 0))
+
+    for layer in sorted_layers:
+        if not layer.get("visible", True):
+            continue
+
+        img_src = layer.get("image") or layer.get("image_source") or layer.get("image_path") or layer.get("image_base64")
+        if not img_src:
+            continue
+
+        scale = float(layer.get("scale", 1.0))
+        rot = float(layer.get("rotation", 0.0))
+        scrape = float(layer.get("scrape", 0.0))
+        opacity = float(layer.get("opacity", 1.0))
+        chrome = layer.get("chrome_effect")
+
+        # Resolve position
+        cx = layer.get("x")
+        cy = layer.get("y")
+        if cx is None or cy is None:
+            preset = layer.get("preset", "center")
+            px, py = resolve_bake_position(weapon_key, bw, bh, preset=preset)
+            cx = px if cx is None else int(cx)
+            cy = py if cy is None else int(cy)
+        else:
+            cx = int(cx)
+            cy = int(cy)
+
+        transformed = transform_sticker_layer(
+            img_src,
+            base_w=bw,
+            base_h=bh,
+            scale=scale,
+            rotation=rot,
+            scrape=scrape,
+            opacity=opacity,
+            chrome_effect=chrome,
+        )
+
+        tl_x = cx - (transformed.width // 2)
+        tl_y = cy - (transformed.height // 2)
+
+        # High-precision alpha composite via layer canvas
+        layer_canvas = Image.new("RGBA", (bw, bh), (0, 0, 0, 0))
+        layer_canvas.paste(transformed, (tl_x, tl_y))
+        composite = Image.alpha_composite(composite, layer_canvas)
+
+    return composite
+
+
+def bake_multi_stickers_onto_texture(
+    base_image: Union[str, Path, bytes, Image.Image],
+    layers: List[Dict[str, Any]],
+    weapon_key: str = "generic",
+    dither: str = "floyd_steinberg",
+) -> Tuple[bytes, Image.Image]:
+    """
+    Composites multiple free-form sticker layers onto the base texture
+    in 32-bit RGBA space, then performs ONE master 256-color quantization pass.
+    Returns (payload_bytes, composite_pil_image).
+    """
+    composite = composite_multi_stickers(base_image, layers, weapon_key=weapon_key)
+    pix_bytes, pal_bytes = quantize_goldsrc(composite, is_masked=False, dither=dither)
+    payload = pix_bytes + pal_bytes
     return payload, composite

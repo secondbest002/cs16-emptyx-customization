@@ -31,7 +31,12 @@ from ..asset_library import (
     save_custom_skin,
     save_custom_sticker,
 )
-from ..baker import bake_sticker_onto_texture
+from ..baker import (
+    bake_sticker_onto_texture,
+    bake_multi_stickers_onto_texture,
+    composite_multi_stickers,
+    transform_sticker_layer,
+)
 from ..color_adjuster import adjust_and_quantize, adjust_color_grading
 from ..glove_transfer import (
     apply_glove_preset,
@@ -238,6 +243,43 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
         if not img_data_uri:
             raise ValueError("No image data or path provided.")
         return base64.b64decode(img_data_uri)
+
+    def _resolve_layer_image_bytes(self, layer: dict) -> bytes:
+        img_src = layer.get("image_base64") or layer.get("image") or layer.get("previewUri") or layer.get("preview")
+        if img_src and str(img_src).startswith("data:"):
+            if "," in img_src:
+                img_src = img_src.split(",", 1)[1]
+            return base64.b64decode(img_src)
+        elif img_src and len(str(img_src)) > 500:
+            try:
+                return base64.b64decode(img_src)
+            except Exception:
+                pass
+
+        path_str = layer.get("image_path") or layer.get("path")
+        if path_str:
+            p = Path(path_str)
+            if not p.is_absolute():
+                p = self.workspace_root / p
+            if not p.is_file():
+                alt = self.studio_root / path_str
+                if alt.is_file():
+                    p = alt
+                else:
+                    raise FileNotFoundError(f"Sticker layer image not found: {path_str}")
+            return p.read_bytes()
+
+        if isinstance(img_src, str) and len(img_src) < 500:
+            p = Path(img_src)
+            if not p.is_absolute():
+                p = self.workspace_root / p
+            if p.is_file():
+                return p.read_bytes()
+            alt = self.studio_root / img_src
+            if alt.is_file():
+                return alt.read_bytes()
+
+        raise ValueError("Layer does not contain a valid image or path.")
 
     def do_OPTIONS(self):
         self.send_response(HTTPStatus.NO_CONTENT)
@@ -666,27 +708,16 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                     {
                         "success": True,
                         "preview": f"data:image/png;base64,{encoded}",
+                        "layers_count": len(resolved_layers) if req_data.get("layers") else 1,
                     }
                 )
                 return
 
-            elif path == "/api/bake_preview":
-                # Real-time preview of composited sticker on weapon texture without saving
+            elif path in ("/api/bake_layers_preview", "/api/bake_preview"):
                 weapon = req_data.get("weapon", "usp")
                 team = req_data.get("team", "ct")
                 custom_path = req_data.get("path")
                 tex_idx = req_data.get("texture_index")
-                preset = req_data.get("preset", "center")
-                coords = req_data.get("coords")
-                scale = _safe_float(req_data.get("scale"), 1.0)
-                rotation = _safe_float(req_data.get("rotation"), 0.0)
-                scrape = _safe_float(req_data.get("scrape"), 0.0)
-                pre_emphasis = _safe_bool(req_data.get("pre_emphasis"), True)
-                chrome_effect = req_data.get("chrome_effect") or req_data.get("fx")
-                if chrome_effect and str(chrome_effect).lower() in ("matte", "none", ""):
-                    chrome_effect = None
-
-                sticker_bytes = self._extract_image_bytes(req_data)
 
                 if custom_path:
                     mdl_path = Path(custom_path).resolve()
@@ -705,20 +736,57 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                     return
 
                 base_rgba = target_tex.to_rgba_image()
-                custom_tuple = (int(coords[0]), int(coords[1])) if coords and len(coords) == 2 else None
 
-                _, composite_rgba = bake_sticker_onto_texture(
-                    base_rgba,
-                    sticker_bytes,
-                    weapon_key=weapon,
-                    preset=preset,
-                    custom_coords=custom_tuple,
-                    scale_multiplier=scale,
-                    rotation_deg=rotation,
-                    scrape=scrape,
-                    pre_emphasis=pre_emphasis,
-                    chrome_effect=chrome_effect,
-                )
+                if req_data.get("layers"):
+                    raw_layers = req_data.get("layers", [])
+                    resolved_layers = []
+                    for idx, layer in enumerate(raw_layers):
+                        if not layer.get("visible", True):
+                            continue
+                        try:
+                            img_bytes = self._resolve_layer_image_bytes(layer)
+                        except Exception:
+                            continue
+                        resolved_layers.append({
+                            "image": img_bytes,
+                            "x": layer.get("x"),
+                            "y": layer.get("y"),
+                            "scale": _safe_float(layer.get("scale"), 1.0),
+                            "rotation": _safe_float(layer.get("rotation"), 0.0),
+                            "scrape": _safe_float(layer.get("scrape"), 0.0),
+                            "opacity": _safe_float(layer.get("opacity"), 1.0),
+                            "chrome_effect": layer.get("chrome_effect"),
+                            "visible": True,
+                            "z_index": _safe_int(layer.get("z_index"), idx),
+                        })
+
+                    composite_rgba = composite_multi_stickers(base_rgba, resolved_layers, weapon_key=weapon)
+                else:
+                    preset = req_data.get("preset", "center")
+                    coords = req_data.get("coords")
+                    scale = _safe_float(req_data.get("scale"), 1.0)
+                    rotation = _safe_float(req_data.get("rotation"), 0.0)
+                    scrape = _safe_float(req_data.get("scrape"), 0.0)
+                    pre_emphasis = _safe_bool(req_data.get("pre_emphasis"), True)
+                    chrome_effect = req_data.get("chrome_effect") or req_data.get("fx")
+                    if chrome_effect and str(chrome_effect).lower() in ("matte", "none", ""):
+                        chrome_effect = None
+
+                    sticker_bytes = self._extract_image_bytes(req_data)
+                    custom_tuple = (int(coords[0]), int(coords[1])) if coords and len(coords) == 2 else None
+
+                    _, composite_rgba = bake_sticker_onto_texture(
+                        base_rgba,
+                        sticker_bytes,
+                        weapon_key=weapon,
+                        preset=preset,
+                        custom_coords=custom_tuple,
+                        scale_multiplier=scale,
+                        rotation_deg=rotation,
+                        scrape=scrape,
+                        pre_emphasis=pre_emphasis,
+                        chrome_effect=chrome_effect,
+                    )
 
                 buf = io.BytesIO()
                 composite_rgba.save(buf, format="PNG")
@@ -728,6 +796,7 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                     {
                         "success": True,
                         "preview": f"data:image/png;base64,{encoded}",
+                        "layers_count": len(resolved_layers) if req_data.get("layers") else 1,
                     }
                 )
                 return
@@ -791,24 +860,11 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                 )
                 return
 
-            elif path == "/api/bake":
-                # Bakes sticker PNG directly onto weapon body texture
+            elif path in ("/api/bake_layers_commit", "/api/bake"):
                 weapon = req_data.get("weapon", "usp")
                 team = req_data.get("team", "ct")
                 custom_path = req_data.get("path")
                 tex_idx = req_data.get("texture_index")
-                preset = req_data.get("preset", "center")
-                coords = req_data.get("coords")  # [x, y]
-                scale = _safe_float(req_data.get("scale"), 1.0)
-                rotation = _safe_float(req_data.get("rotation"), 0.0)
-                scrape = _safe_float(req_data.get("scrape"), 0.0)
-                fx = req_data.get("fx")
-                pre_emphasis = _safe_bool(req_data.get("pre_emphasis"), True)
-                chrome_effect = req_data.get("chrome_effect") or req_data.get("fx")
-                if chrome_effect and str(chrome_effect).lower() in ("matte", "none", ""):
-                    chrome_effect = None
-
-                sticker_bytes = self._extract_image_bytes(req_data)
 
                 if custom_path:
                     mdl_path = Path(custom_path).resolve()
@@ -819,7 +875,6 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                 if tex_idx is not None:
                     target_tex = model.get_texture_by_index(int(tex_idx))
                 else:
-                    # Pick main weapon skin
                     skins = model.get_skins()
                     target_tex = max(skins, key=lambda t: t.width * t.height) if skins else None
 
@@ -827,51 +882,128 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                     self._send_json({"success": False, "error": "No weapon skin texture found to bake onto."}, status=404)
                     return
 
-                # Save snapshot
                 model.save_slot_snapshot(target_tex)
-
                 base_rgba = target_tex.to_rgba_image()
-                custom_tuple = (int(coords[0]), int(coords[1])) if coords and len(coords) == 2 else None
 
-                payload, composite_rgba = bake_sticker_onto_texture(
-                    base_rgba,
-                    sticker_bytes,
-                    weapon_key=weapon,
-                    preset=preset,
-                    custom_coords=custom_tuple,
-                    scale_multiplier=scale,
-                    rotation_deg=rotation,
-                    scrape=scrape,
-                    pre_emphasis=pre_emphasis,
-                    chrome_effect=chrome_effect,
-                )
+                if req_data.get("layers"):
+                    raw_layers = req_data.get("layers", [])
+                    dither_mode = req_data.get("dither", "floyd_steinberg")
+                    sync_pw = _safe_bool(req_data.get("sync_pw"), False)
 
-                new_flags = None
-                if fx:
-                    fx_clean = str(fx).lower().strip()
-                    if fx_clean in ("chrome", "foil"):
-                        new_flags = target_tex.flags | STUDIO_NF_CHROME
-                    elif fx_clean == "glow":
-                        new_flags = target_tex.flags | STUDIO_NF_ADDITIVE
-                    elif fx_clean == "matte":
-                        new_flags = target_tex.flags & ~(STUDIO_NF_CHROME | STUDIO_NF_ADDITIVE)
+                    resolved_layers = []
+                    for idx, layer in enumerate(raw_layers):
+                        if not layer.get("visible", True):
+                            continue
+                        try:
+                            img_bytes = self._resolve_layer_image_bytes(layer)
+                        except Exception:
+                            continue
+                        resolved_layers.append({
+                            "image": img_bytes,
+                            "x": layer.get("x"),
+                            "y": layer.get("y"),
+                            "scale": _safe_float(layer.get("scale"), 1.0),
+                            "rotation": _safe_float(layer.get("rotation"), 0.0),
+                            "scrape": _safe_float(layer.get("scrape"), 0.0),
+                            "opacity": _safe_float(layer.get("opacity"), 1.0),
+                            "chrome_effect": layer.get("chrome_effect"),
+                            "visible": True,
+                            "z_index": _safe_int(layer.get("z_index"), idx),
+                        })
 
-                model.inject_texture_payload(target_tex, payload, new_flags=new_flags)
-                saved_path = model.save_atomic(create_backup=True)
+                    payload, composite_rgba = bake_multi_stickers_onto_texture(
+                        base_rgba,
+                        resolved_layers,
+                        weapon_key=weapon,
+                        dither=dither_mode,
+                    )
 
-                buf = io.BytesIO()
-                composite_rgba.save(buf, format="PNG")
-                encoded = base64.b64encode(buf.getvalue()).decode("ascii")
+                    model.inject_texture_payload(target_tex, payload)
+                    saved_path = model.save_atomic(create_backup=True)
 
-                self._send_json(
-                    {
-                        "success": True,
-                        "message": f"Successfully baked sticker onto '{target_tex.name}' at '{preset}'.",
-                        "saved_path": str(saved_path),
-                        "preview": f"data:image/png;base64,{encoded}",
-                    }
-                )
-                return
+                    sync_res = None
+                    if sync_pw:
+                        try:
+                            sync_res = sync_pw_models(
+                                root_dir=self.workspace_root,
+                                weapon=weapon,
+                                team=team,
+                                auto_backup=True,
+                                v_model_path=str(mdl_path),
+                                include_stickers=True,
+                            )
+                        except Exception as e:
+                            sync_res = {"success": False, "error": str(e)}
+
+                    buf = io.BytesIO()
+                    composite_rgba.save(buf, format="PNG")
+                    encoded = base64.b64encode(buf.getvalue()).decode("ascii")
+
+                    self._send_json(
+                        {
+                            "success": True,
+                            "message": f"Successfully baked {len(resolved_layers)} sticker layer(s) onto '{target_tex.name}'.",
+                            "saved_path": str(saved_path),
+                            "preview": f"data:image/png;base64,{encoded}",
+                            "layers_count": len(resolved_layers),
+                            "sync_pw": sync_res,
+                        }
+                    )
+                    return
+                else:
+                    preset = req_data.get("preset", "center")
+                    coords = req_data.get("coords")
+                    scale = _safe_float(req_data.get("scale"), 1.0)
+                    rotation = _safe_float(req_data.get("rotation"), 0.0)
+                    scrape = _safe_float(req_data.get("scrape"), 0.0)
+                    fx = req_data.get("fx")
+                    pre_emphasis = _safe_bool(req_data.get("pre_emphasis"), True)
+                    chrome_effect = req_data.get("chrome_effect") or req_data.get("fx")
+                    if chrome_effect and str(chrome_effect).lower() in ("matte", "none", ""):
+                        chrome_effect = None
+
+                    sticker_bytes = self._extract_image_bytes(req_data)
+                    custom_tuple = (int(coords[0]), int(coords[1])) if coords and len(coords) == 2 else None
+
+                    payload, composite_rgba = bake_sticker_onto_texture(
+                        base_rgba,
+                        sticker_bytes,
+                        weapon_key=weapon,
+                        preset=preset,
+                        custom_coords=custom_tuple,
+                        scale_multiplier=scale,
+                        rotation_deg=rotation,
+                        scrape=scrape,
+                        pre_emphasis=pre_emphasis,
+                        chrome_effect=chrome_effect,
+                    )
+
+                    new_flags = None
+                    if fx:
+                        fx_clean = str(fx).lower().strip()
+                        if fx_clean in ("chrome", "foil"):
+                            new_flags = target_tex.flags | STUDIO_NF_CHROME
+                        elif fx_clean == "glow":
+                            new_flags = target_tex.flags | STUDIO_NF_ADDITIVE
+                        elif fx_clean == "matte":
+                            new_flags = target_tex.flags & ~(STUDIO_NF_CHROME | STUDIO_NF_ADDITIVE)
+
+                    model.inject_texture_payload(target_tex, payload, new_flags=new_flags)
+                    saved_path = model.save_atomic(create_backup=True)
+
+                    buf = io.BytesIO()
+                    composite_rgba.save(buf, format="PNG")
+                    encoded = base64.b64encode(buf.getvalue()).decode("ascii")
+
+                    self._send_json(
+                        {
+                            "success": True,
+                            "message": f"Successfully baked sticker onto '{target_tex.name}' at '{preset}'.",
+                            "saved_path": str(saved_path),
+                            "preview": f"data:image/png;base64,{encoded}",
+                        }
+                    )
+                    return
 
             elif path == "/api/revert":
                 # Reverts single slot

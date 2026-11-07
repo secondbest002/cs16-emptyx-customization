@@ -1947,7 +1947,8 @@ function setupRaycastAndRepositionInteractions(domElement, camera, meshGroup) {
     }
 
     // 3. Hover Cursor Feedback when Bake Sticker is ready to drag
-    if (isBakeModeEligible() && state.bake?.stickerImg && meshGroup && !state.viewport3d.repositionMode) {
+    const hasBakeStickers = (state.bake?.layers && state.bake.layers.length > 0) || Boolean(state.bake?.stickerImg);
+    if (isBakeModeEligible() && hasBakeStickers && meshGroup && !state.viewport3d.repositionMode) {
       const rect = domElement.getBoundingClientRect();
       mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
@@ -1986,8 +1987,9 @@ function setupRaycastAndRepositionInteractions(domElement, camera, meshGroup) {
         const intersects = raycaster.intersectObjects(validMeshes, false);
 
         if (intersects.length > 0 && intersects[0].uv) {
-          if (!state.bake?.stickerImg) {
-            showToast("Pilih sticker dari Asset Library terlebih dahulu untuk di-drag pada permukaan 3D!", "info");
+          const hasSticker = (state.bake?.layers && state.bake.layers.length > 0) || Boolean(state.bake?.stickerImg);
+          if (!hasSticker) {
+            showToast("Choose or add a sticker layer first to drag on the 3D weapon surface!", "info");
           } else {
             isBakeSurfaceDragging = true;
             if (state.viewport3d.controls) {

@@ -1561,7 +1561,7 @@ export function renderStickerLibraryGrid() {
     const bakeBtn = card.querySelector(".apply-bake-btn");
     if (bakeBtn) {
       bakeBtn.addEventListener("click", () => {
-        eventBus.emit("bake:loadSticker", { previewUri: item.preview || item.thumbnail, path: item.path });
+        eventBus.emit("bake:loadSticker", { previewUri: item.preview || item.thumbnail, path: item.path, name: item.name });
         const bakeTab = document.querySelector('.nav-tab[data-tab="bake"]');
         if (bakeTab) bakeTab.click();
       });
@@ -1720,7 +1720,7 @@ export function renderModalLibraryGrid() {
       els.libraryModal.classList.add("hidden");
 
       if (state.modalTargetDestination === "bake") {
-        eventBus.emit("bake:loadSticker", { previewUri: item.preview || item.thumbnail, path: item.path });
+        eventBus.emit("bake:loadSticker", { previewUri: item.preview || item.thumbnail, path: item.path, name: item.name });
       } else if (state.modalTargetDestination === "slotTune") {
         state.slotTune.stickerDataUri = item.preview || item.thumbnail;
         const img = new Image();

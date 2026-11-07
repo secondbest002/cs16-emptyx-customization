@@ -1256,14 +1256,32 @@
               </select>
             </div>
 
-            <div class="form-group">
-              <label>Select Sticker:</label>
-              <div class="sticker-source-row">
-                <button type="button" id="bakePickLibraryBtn" class="btn btn-primary" style="flex: 1;">
-                  <span class="icon"><svg class="glyph glyph-sm"><use href="#glyph-sparkle"></use></svg></span>
-                  <span>Choose from Asset Library</span>
-                </button>
+            <!-- Multi-Layer Sticker Staging Stack (Free-Form Crafting) -->
+            <div class="bake-layer-stack-container" id="bakeLayerStackContainer">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span class="pulse-pip-cyan"></span>
+                  <span style="font-size: 0.8rem; font-weight: 700; color: #f8fafc; text-transform: uppercase; letter-spacing: 0.5px;">Sticker Layers</span>
+                  <span class="dock-count-badge" id="bakeLayerCountBadge">0 LAYERS</span>
+                </div>
+                <div style="display: flex; gap: 4px;">
+                  <button type="button" id="bakePickLibraryBtn" class="btn btn-xs btn-primary" title="Add a new sticker layer from library">
+                    <svg class="glyph glyph-xs"><use href="#glyph-sparkle"></use></svg> + Library
+                  </button>
+                  <button type="button" id="bakeClearLayersBtn" class="btn btn-xs btn-secondary" title="Clear all sticker layers">
+                    <svg class="glyph glyph-xs"><use href="#glyph-trash"></use></svg>
+                  </button>
+                </div>
               </div>
+
+              <!-- Layer Cards List -->
+              <div class="bake-layers-list" id="bakeLayersList">
+                <div id="bakeNoLayersPrompt" style="padding: 14px; text-align: center; color: var(--text-dim); font-size: 0.78rem; border: 1px dashed rgba(255,255,255,0.1); border-radius: 6px;">
+                  No stickers on staging canvas.<br>Click <strong>+ Library</strong> or drop an image below.
+                </div>
+              </div>
+
+              <!-- Quick File Drop Zone -->
               <div class="drop-zone mini" id="bakeDropZone" style="margin-top: 8px;">
                 <input type="file" id="bakeFileInput" accept="image/*" class="file-input">
                 <div class="drop-prompt">
@@ -1271,6 +1289,15 @@
                   <span>Or Drop Sticker PNG / <strong>Browse</strong></span>
                 </div>
               </div>
+            </div>
+
+            <!-- Active Layer Context Banner -->
+            <div id="bakeActiveLayerBanner" style="display: flex; align-items: center; justify-content: space-between; background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: 6px; padding: 6px 10px; margin-bottom: 10px;">
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--accent-cyan);">
+                <svg class="glyph glyph-xs"><use href="#glyph-target"></use></svg>
+                <span>Editing: <strong id="bakeActiveLayerTitle">Layer 1</strong></span>
+              </div>
+              <span id="bakeActiveLayerIndex" class="layer-badge-idx">#1</span>
             </div>
 
             <div class="form-group">
@@ -1344,10 +1371,28 @@
               <input type="range" id="bakeScrape" min="0" max="100" step="5" value="0" class="slider">
             </div>
 
+            <div class="form-row" style="margin-top: 6px;">
+              <div class="form-group half">
+                <label for="bakeOpacity">Opacity: <span id="bakeOpacityVal">100%</span></label>
+                <input type="range" id="bakeOpacity" min="0" max="100" step="5" value="100" class="slider">
+              </div>
+              <div class="form-group half">
+                <label for="bakeChromeEffect">Foil / Chrome Sheen:</label>
+                <select id="bakeChromeEffect" class="styled-select" style="padding: 3px 6px; font-size: 0.78rem;">
+                  <option value="matte">Matte (Standard)</option>
+                  <option value="foil">Foil Shimmer</option>
+                  <option value="gold">Gold Shine</option>
+                  <option value="sapphire">Sapphire Blue</option>
+                  <option value="ruby">Ruby Red</option>
+                  <option value="emerald">Emerald Green</option>
+                </select>
+              </div>
+            </div>
+
             <div class="btn-group-row" style="display: flex; gap: 10px; margin-top: 14px;">
               <button type="button" id="bakeApplyBtn" class="btn-inject" style="flex: 2; height: 32px;" title="Bake and composite sticker into target weapon texture">
                 <svg class="glyph glyph-xs"><use href="#glyph-flame"></use></svg>
-                <span>BAKE TO SURFACE</span>
+                <span id="bakeApplyBtnLabel">BAKE ALL TO SURFACE</span>
               </button>
               <button type="button" id="bakeResetBtn" class="btn-revert" style="flex: 1; height: 32px; justify-content: center;" title="Clear sticker from canvas">
                 <svg class="glyph glyph-xs"><use href="#glyph-restore"></use></svg>
