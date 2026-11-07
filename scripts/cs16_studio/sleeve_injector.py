@@ -24,6 +24,8 @@ import numpy as np
 from PIL import Image
 
 from .config_manager import StudioConfig
+from .pw_restore import get_model_backup_dir
+from .pw_restore import get_model_backup_dir
 from .mdl_core import (
     STUDIO_MAGIC,
     STUDIO_VERSION,
@@ -698,11 +700,12 @@ def transplant_3d_sleeves(
             "safety_issues": safety_issues,
         }
 
-    # 5. Create atomic backup of target before modification
+    # 5. Create atomic backup of target before modification in backup/ folder
     if create_backup and target_p.exists():
         arm_info = detect_arm_type(target_p)
         bak_suffix = ".manset_arm.bak" if arm_info["is_bare"] else ".bak"
-        bak_file = target_p.with_suffix(bak_suffix)
+        b_dir = get_model_backup_dir(target_p, create=True)
+        bak_file = b_dir / f"{target_p.stem}{bak_suffix}"
         shutil.copy2(target_p, bak_file)
 
     # 6. Check fast-path native sync for paired weapons (e.g. M4A4 / AK47 with genuine CT arms)

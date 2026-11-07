@@ -17,13 +17,66 @@ STUDIO_MAGIC = b"IDST"
 STUDIO_VERSION = 10
 
 
+BACKUP_FOLDER_NAMES = ["backup", "backups", ".backup", ".studio_backups"]
+
+
+def get_model_backup_dir(
+    model_path: Union[str, Path],
+    folder_name: str = "backup",
+    create: bool = True,
+) -> Path:
+    """Returns the dedicated backup folder for the model."""
+    p = Path(model_path).resolve()
+    b_dir = p.parent / folder_name
+    if create:
+        b_dir.mkdir(parents=True, exist_ok=True)
+    return b_dir
+
+
+def get_model_backup_path(
+    model_path: Union[str, Path],
+    ext: str = ".orig.mdl",
+    folder_name: str = "backup",
+) -> Path:
+    """Returns the full path to a model backup inside the dedicated backup directory."""
+    b_dir = get_model_backup_dir(model_path, folder_name=folder_name, create=True)
+    return b_dir / f"{Path(model_path).stem}{ext}"
+
+
 def find_model_backup(model_path: Union[str, Path]) -> Tuple[Optional[Path], Optional[str]]:
     """
     Checks for available backup files for a model.
+    Checks dedicated backup subfolders ('backup/', 'backups/', '.backup/', '.studio_backups/')
+    first, and falls back to the parent directory for backwards compatibility.
     Returns (backup_path, backup_type) where backup_type is '.orig.mdl' or '.bak'.
     """
     p = Path(model_path).resolve()
+    stem = p.stem
+    name = p.name
 
+    # 1. Search in dedicated backup directories
+    for b_name in BACKUP_FOLDER_NAMES:
+        b_dir = p.parent / b_name
+        if not b_dir.is_dir():
+            continue
+
+        # Check .orig.mdl variants
+        cand_orig = b_dir / f"{stem}.orig.mdl"
+        if cand_orig.is_file():
+            return cand_orig, ".orig.mdl"
+
+        # Check .bak variants
+        for cand_bak in (
+            b_dir / f"{stem}.mdl.bak",
+            b_dir / f"{stem}.orig.bak",
+            b_dir / f"{name}.bak",
+            b_dir / f"{stem}.bak",
+            b_dir / name,  # exact model name inside backup dir
+        ):
+            if cand_bak.is_file():
+                return cand_bak, ".bak"
+
+    # 2. Legacy fallback: check parent directory directly
     orig = p.with_suffix(".orig.mdl")
     if orig.is_file():
         return orig, ".orig.mdl"
@@ -35,6 +88,10 @@ def find_model_backup(model_path: Union[str, Path]) -> Tuple[Optional[Path], Opt
     bak_suffix = p.with_suffix(".bak")
     if bak_suffix.is_file():
         return bak_suffix, ".bak"
+
+    cand_orig_bak = p.parent / f"{stem}.orig.bak"
+    if cand_orig_bak.is_file():
+        return cand_orig_bak, ".orig.bak"
 
     return None, None
 
@@ -76,7 +133,7 @@ def restore_single_model_file(model_path: Union[str, Path]) -> Tuple[bool, str, 
                 pass
         return False, f"Failed to replace '{p.name}' with backup: {e}", bak_type
 
-    orig_path = p.with_suffix(".orig.mdl")
+    orig_path = get_model_backup_path(p, ext=".orig.mdl")
     if bak_type == ".bak" and not orig_path.exists():
         try:
             shutil.copy2(bak_path, orig_path)
@@ -182,6 +239,9 @@ def resolve_weapon_triplet(
                             names_to_try.append(f"{role}_knife.mdl")
                         for nm in names_to_try:
                             for f in search_root_dir.rglob("*.mdl"):
+                                parts_lower = [part.lower() for part in f.parts]
+                                if any(b in parts_lower for b in BACKUP_FOLDER_NAMES):
+                                    continue
                                 if f.name.lower() == nm and not f.name.endswith(".orig.mdl") and not f.name.endswith(".bak"):
                                     found_path = f.resolve()
                                     break
@@ -284,3 +344,65 @@ def restore_weapon_models(
 
     results["success"] = results["restored_count"] > 0
     return results
+
+
+def migrate_loose_backups(
+    search_dirs: Optional[List[Union[str, Path]]] = None,
+    target_folder_name: str = "backup",
+    root_dir: Optional[Union[str, Path]] = None,
+) -> List[Dict[str, str]]:
+    """
+    Finds loose backup files (.orig.mdl, .mdl.bak, .bak, .orig.bak, .original_palettes.dat)
+    sitting directly in model directories and moves them neatly into their dedicated 'backup/' folder.
+    Returns list of moved file records: [{'source': str, 'dest': str}].
+    """
+    root = Path(root_dir).resolve() if root_dir else config.get_game_root()
+    if not search_dirs:
+        search_dirs = [
+            root / "cstrike" / "models" / "custom_skins" / "ct",
+            root / "cstrike" / "models" / "custom_skins" / "t",
+            root / "cstrike" / "models" / "csgo_skins" / "ct",
+            root / "cstrike" / "models" / "csgo_skins" / "t",
+            root / "cstrike" / "models" / "pw_models",
+            root / "cstrike" / "models",
+            root / "cstrike_hd" / "models",
+        ]
+
+    moved = []
+    backup_extensions = (".orig.mdl", ".mdl.bak", ".bak", ".orig.bak", ".original_palettes.dat")
+
+    for s_dir in search_dirs:
+        dir_p = Path(s_dir).resolve()
+        if not dir_p.is_dir():
+            continue
+
+        b_dir = dir_p / target_folder_name
+
+        try:
+            entries = list(dir_p.iterdir())
+        except OSError:
+            continue
+
+        for f in entries:
+            if not f.is_file():
+                continue
+            f_name_lower = f.name.lower()
+            if any(f_name_lower.endswith(ext) for ext in backup_extensions):
+                b_dir.mkdir(parents=True, exist_ok=True)
+                dest = b_dir / f.name
+                if not dest.exists():
+                    try:
+                        shutil.move(str(f), str(dest))
+                        moved.append({"source": str(f), "dest": str(dest), "action": "moved"})
+                    except OSError as e:
+                        pass
+                else:
+                    # Destination already has this backup; remove the loose duplicate
+                    try:
+                        f.unlink()
+                        moved.append({"source": str(f), "dest": str(dest), "action": "removed_loose_duplicate"})
+                    except OSError:
+                        pass
+
+    return moved
+

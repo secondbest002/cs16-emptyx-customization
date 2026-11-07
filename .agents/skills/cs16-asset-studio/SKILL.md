@@ -30,7 +30,7 @@ This workspace (`D:\Counter-Strike 1.6\cs16-emptyx-customization`) is decoupled 
 7. **Float & Wear Simulator**: Procedural paint chipping on edges (Sobel/Laplacian detection), metal alloy abrasion, and patina oxidation from *Factory New (0.00)* to *Battle-Scarred (1.00)*.
 8. **GoldSrc Metallic Chrome / Foil Shimmer**: 1-click toggle of `STUDIO_NF_CHROME (0x02)` for reflective environmental shine on stickers and metal weapon parts.
 9. **Built-in Asset & Sticker Library**: Instant access to iconic tournament holo badges (Katowice 2014, Titan, iBuyPower, Navi, Crown Foil, Howling Dawn) and custom skins.
-10. **Immutable Backup Protection**: Automatic `.orig.mdl` backup on first edit, single-slot snapshots, and 1-click restore.
+10. **Immutable Backup Protection & Isolated Folder**: Automatic `.orig.mdl` backup on first edit safely isolated inside dedicated `backup/` subfolders (keeping active viewmodel folders clean and clutter-free), single-slot snapshots, and 1-click restore.
 11. **Multi-Step Undo / Redo History Stack (`Ctrl+Z` / `Ctrl+Y`)**: Seamlessly step backward and forward through texture injections, color grading adjustments, and bake actions without risking loss of work.
 12. **Split-Screen Curtain Comparison (Before vs After Slider)**: Smooth draggable vertical divider over weapon textures to inspect fine details between original and graded outputs at 60fps.
 13. **Quick Weapon Switcher (`Ctrl+K` or `/`)**: Instant Spotlight search modal to switch active weapons and loadouts in 0.1s with full keyboard navigation.
@@ -131,6 +131,9 @@ python scripts/cs16_studio.py restore -w usp --team ct --pw-only
 
 # Restore only first-person viewmodel (V only)
 python scripts/cs16_studio.py restore -w usp --team ct --v-only
+
+# Tidy loose legacy backups into dedicated backup/ subfolders
+python scripts/cs16_studio.py clean-backups
 ```
 
 ### 13. Export Custom Mod Pack (.zip)

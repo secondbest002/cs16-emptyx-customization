@@ -11,9 +11,12 @@ from .image_pipeline import process_slot_sticker_with_transform
 from .mdl_core import MdlModel, extract_model_3d
 from .pw_restore import (
     find_model_backup,
+    get_model_backup_dir,
+    get_model_backup_path,
     restore_single_model_file,
     resolve_weapon_triplet,
     restore_weapon_models,
+    migrate_loose_backups,
 )
 from .stattrak_customizer import customize_stattrak_texture
 from .wear_simulator import apply_wear_simulation, simulate_and_quantize

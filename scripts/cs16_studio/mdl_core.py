@@ -15,7 +15,7 @@ import shutil
 import struct
 from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
-from .pw_restore import find_model_backup, restore_single_model_file, resolve_weapon_triplet, restore_weapon_models
+from .pw_restore import find_model_backup, get_model_backup_dir, get_model_backup_path, BACKUP_FOLDER_NAMES, restore_single_model_file, resolve_weapon_triplet, restore_weapon_models
 from .config_manager import config
 from PIL import Image
 
@@ -495,10 +495,14 @@ class MdlModel:
 
     def create_immutable_backup_if_needed(self) -> Path:
         """
-        Creates an immutable original backup (.orig.mdl) if it does not already exist.
-        This file is NEVER overwritten once created.
+        Creates an immutable original backup (.orig.mdl) inside the dedicated backup/ folder
+        if it does not already exist. This file is NEVER overwritten once created.
         """
-        orig_path = self.filepath.with_suffix(".orig.mdl")
+        existing_bak, _ = find_model_backup(self.filepath)
+        if existing_bak and existing_bak.is_file():
+            return existing_bak
+
+        orig_path = get_model_backup_path(self.filepath, ext=".orig.mdl")
         if not orig_path.exists():
             shutil.copy2(self.filepath, orig_path)
         return orig_path
@@ -589,12 +593,13 @@ class MdlModel:
         if not target_tex:
             return False
 
-        orig_path = self.filepath.with_suffix(".orig.mdl")
+        orig_bak_tuple = find_model_backup(self.filepath)
+        orig_path = orig_bak_tuple[0] if orig_bak_tuple else None
         b_dir = self.get_backup_dir()
 
         # Helper to check if backup exists for a given texture
         def do_revert(tex: MdlTexture) -> bool:
-            if orig_path.exists():
+            if orig_path and orig_path.exists():
                 orig_model = MdlModel(orig_path)
                 orig_tex = orig_model.find_texture(tex.name)
                 if orig_tex and orig_tex.size == tex.size:
@@ -707,7 +712,7 @@ def discover_available_models(root_dir: Optional[Union[str, Path]] = None) -> Di
             seen_team_paths.add(pair_key)
             name = mdl_path.stem
             weapon = name[2:] if name.startswith("v_") else name
-            orig_exists = mdl_path.with_suffix(".orig.mdl").exists()
+            orig_exists = find_model_backup(mdl_path)[0] is not None
 
             item = {
                 "name": name,
@@ -723,7 +728,7 @@ def discover_available_models(root_dir: Optional[Union[str, Path]] = None) -> Di
             seen_all_paths.add(p_str)
             name = mdl_path.stem
             weapon = name[2:] if name.startswith("v_") else name
-            orig_exists = mdl_path.with_suffix(".orig.mdl").exists()
+            orig_exists = find_model_backup(mdl_path)[0] is not None
             results["all"].append({
                 "name": name,
                 "weapon": weapon,

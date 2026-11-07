@@ -313,7 +313,7 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                     mdl_path = resolve_model_path(weapon, team=team, root_dir=self.workspace_root)
 
                 model = MdlModel(mdl_path)
-                orig_exists = mdl_path.with_suffix(".orig.mdl").exists()
+                orig_exists = find_model_backup(mdl_path)[0] is not None
 
                 textures_data = []
                 for t in model.textures:
@@ -907,6 +907,14 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                     )
                 return
 
+            elif path == "/api/tools/clean_backups":
+                try:
+                    moved = migrate_loose_backups(root_dir=self.workspace_root)
+                    self._send_json({"success": True, "moved_count": len(moved), "moved": moved})
+                except Exception as e:
+                    self._send_json({"success": False, "error": str(e)}, status=500)
+                return
+
             elif path == "/api/restore":
                 # Full restore from .orig.mdl
                 weapon = req_data.get("weapon", "usp")
@@ -1423,8 +1431,9 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                     else:
                         mdl_path = resolve_model_path(weapon, team=team, root_dir=self.workspace_root)
 
-                    orig_path = mdl_path.with_name(f"{mdl_path.stem}.orig.mdl")
-                    if not orig_path.exists():
+                    orig_bak_tuple = find_model_backup(mdl_path)
+                    orig_path = orig_bak_tuple[0] if orig_bak_tuple else None
+                    if not orig_path or not orig_path.exists():
                         self._send_json({"success": False, "error": f"No original backup (.orig.mdl) found for {mdl_path.name}."}, status=404)
                         return
 

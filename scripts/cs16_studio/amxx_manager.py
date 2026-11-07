@@ -18,6 +18,8 @@ from PIL import Image
 
 from .image_pipeline import quantize_goldsrc
 from .mdl_core import MdlModel, resolve_model_path, ROLE_SKIN, ROLE_GLOVE
+from .pw_restore import find_model_backup, get_model_backup_path
+from .pw_restore import find_model_backup, get_model_backup_path
 from .config_manager import config
 
 SKIN_INVENTORY_REL = Path("cstrike") / "addons" / "amxmodx" / "configs" / "skin_inventory.ini"
@@ -696,8 +698,9 @@ def sync_pw_models(
             return False
 
         if auto_backup:
-            bak_path = mdl_path.with_suffix(".mdl.bak")
-            if not bak_path.exists():
+            existing_bak, _ = find_model_backup(mdl_path)
+            if not existing_bak:
+                bak_path = get_model_backup_path(mdl_path, ext=".orig.mdl")
                 shutil.copy2(mdl_path, bak_path)
 
         target_model = MdlModel(mdl_path)
@@ -893,7 +896,7 @@ def get_triplet_status(
         mtime_str = datetime.datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
         size_kb = round(st.st_size / 1024, 1)
 
-        has_bak = path.with_suffix(".mdl.bak").exists() or (path.parent / (path.stem + ".orig.mdl")).exists()
+        has_bak = find_model_backup(path)[0] is not None
 
         if prefix == "v":
             synced = True

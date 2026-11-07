@@ -357,9 +357,10 @@ def save_geometry_snapshot(mdl_path: Union[str, Path], action: str = "geometry")
     if not path.is_file():
         raise FileNotFoundError(f"Model file not found: {path}")
 
-    # 1. Immutable original
-    orig_path = path.with_suffix(".orig.mdl")
-    if not orig_path.exists():
+    # 1. Immutable original in dedicated backup folder
+    existing_bak, _ = find_model_backup(path)
+    if not existing_bak:
+        orig_path = get_model_backup_path(path, ext=".orig.mdl")
         shutil.copy2(path, orig_path)
 
     # 2. Undo cache
@@ -414,11 +415,11 @@ def restore_geometry_snapshot(mdl_path: Union[str, Path], snapshot_id: Optional[
                 pass
             return True
 
-    # Fallback to .orig.mdl
-    orig_path = path.with_suffix(".orig.mdl")
-    if orig_path.is_file():
+    # Fallback to backup
+    orig_bak, _ = find_model_backup(path)
+    if orig_bak and orig_bak.is_file():
         tmp = path.with_suffix(".tmp")
-        shutil.copy2(orig_path, tmp)
+        shutil.copy2(orig_bak, tmp)
         os.replace(tmp, path)
         return True
 

@@ -13,6 +13,8 @@ from .baker import bake_sticker_onto_texture
 from .color_adjuster import PRESETS, adjust_and_quantize
 from .glove_transfer import batch_transfer_gloves
 from .image_pipeline import process_image_for_texture
+from .pw_restore import find_model_backup, migrate_loose_backups
+from .pw_restore import find_model_backup, migrate_loose_backups
 from .mdl_core import (
     MdlModel,
     ROLE_SKIN,
@@ -54,7 +56,8 @@ def print_banner():
 def cmd_info(args):
     mdl_path = resolve_model_path(args.weapon, team=args.team)
     model = MdlModel(mdl_path)
-    orig_exists = mdl_path.with_suffix(".orig.mdl").exists()
+    orig_bak_tuple = find_model_backup(mdl_path)
+    orig_exists = orig_bak_tuple[0] is not None
 
     print(f"\nModel File   : {mdl_path}")
     print(f"File Size    : {len(model.data):,} bytes")
@@ -68,6 +71,19 @@ def cmd_info(args):
         flag_str = f"0x{t.flags:04X}"
         print(f"[{t.index:2d}] {t.name:<24} {dim_str:<12} {flag_str:<8} {t.role:<14} {t.role_label}")
     print()
+
+
+def cmd_clean_backups(args):
+    root = args.cstrike if getattr(args, "cstrike", None) else None
+    print("\n[Asset Studio Pro] Scanning model folders for loose backup files...")
+    moved = migrate_loose_backups(root_dir=root)
+    if not moved:
+        print("[Asset Studio Pro] All backup files are already organized in their respective 'backup/' folders!\n")
+    else:
+        print(f"[Asset Studio Pro] Successfully organized {len(moved)} backup file(s) into dedicated 'backup/' folders:")
+        for item in moved:
+            print(f"  -> {Path(item['source']).name}  -->  {item['dest']}")
+        print()
 
 
 def cmd_skin(args):
@@ -722,6 +738,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_restore.add_argument("--pw-only", action="store_true", help="Shortcut for --scope pw (restore P & W models only)")
     p_restore.add_argument("--all", action="store_true", dest="restore_all", help="Explicitly restore all models (V+P+W)")
 
+    # clean-backups
+    p_clean = subparsers.add_parser("clean-backups", help="Move loose .orig.mdl and .bak files into dedicated backup/ subfolders")
+    p_clean.add_argument("--cstrike", default=None, help="Optional game root or cstrike directory")
+
     # pov
     p_pov = subparsers.add_parser("pov", help="Configure first-person viewmodel camera (Modern CS POV)")
     p_pov.add_argument(
@@ -774,6 +794,7 @@ def main():
         "chrome": cmd_chrome,
         "revert": cmd_revert,
         "restore": cmd_restore,
+        "clean-backups": cmd_clean_backups,
         "pov": cmd_pov,
     }
 

@@ -51,6 +51,8 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 from PIL import Image
 
+from .pw_restore import find_model_backup, get_model_backup_path
+from .pw_restore import find_model_backup, get_model_backup_path
 from .mdl_core import (
     STUDIO_MAGIC,
     STUDIO_VERSION,
@@ -1037,9 +1039,10 @@ def inject_chrome_overlay(
 
     target_out = Path(output_path).resolve() if output_path else path
 
-    # 1. Immutable original backup (.orig.mdl)
-    orig_path = path.with_suffix(".orig.mdl")
-    if not orig_path.exists():
+    # 1. Immutable original backup (.orig.mdl) in dedicated backup folder
+    existing_bak, _ = find_model_backup(path)
+    if not existing_bak:
+        orig_path = get_model_backup_path(path, ext=".orig.mdl")
         shutil.copy2(path, orig_path)
 
     with open(path, "rb") as f:
