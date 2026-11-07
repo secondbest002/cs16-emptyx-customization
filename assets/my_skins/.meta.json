@@ -5,5 +5,12 @@
     "weapon": "m4a1",
     "weapon_category": "rifles",
     "category": "Rifles"
+  },
+  "usp_printstream.png": {
+    "name": "Printstream",
+    "skin_name": "Printstream",
+    "weapon": "usp",
+    "weapon_category": "pistols",
+    "category": "Pistols"
   }
 }

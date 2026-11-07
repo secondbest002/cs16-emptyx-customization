@@ -338,6 +338,16 @@
             <span class="telemetry-label" id="engineTelemetryLabel">STANDALONE DCC</span>
           </div>
 
+          <!-- Skin Vault CTAs -->
+          <button type="button" id="saveVaultBtn" class="topbar-action-btn btn-save-vault" title="Save this weapon/knife into Skin Inventory Vault (Ctrl+Shift+S)">
+            <svg class="glyph glyph-xs text-amber"><use href="#glyph-save"></use></svg>
+            <span>Save to Vault</span>
+          </button>
+          <button type="button" id="openVaultBtn" class="topbar-action-btn btn-vault" title="Open Skin Inventory & Loadout Vault">
+            <svg class="glyph glyph-xs text-cyan"><use href="#glyph-box"></use></svg>
+            <span>Skin Vault</span>
+          </button>
+
           <!-- Breathable Equip In-Game CTA -->
           <button type="button" id="equipInGameBtn" class="topbar-action-btn btn-equip-compact" title="Equip this weapon variant in active in-game loadout">
             <svg class="glyph glyph-xs text-cyan"><use href="#glyph-check"></use></svg>
@@ -2315,6 +2325,103 @@
 
           <div class="library-grid modal-grid" id="modalLibraryGrid">
             <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Save to Skin Inventory Vault -->
+    <div id="saveToVaultModal" class="modal-overlay hidden">
+      <div class="modal-card mini">
+        <div class="modal-header">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <svg class="glyph glyph-sm text-amber"><use href="#glyph-save"></use></svg>
+            <h3 style="margin: 0;">Save to Skin Inventory Vault</h3>
+          </div>
+          <button type="button" id="saveToVaultCloseBtn" class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label for="vaultSkinNameInput" style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px;">
+              <span>Skin Display Name</span>
+              <span class="vault-weapon-tag" id="vaultSaveWeaponTag" style="color: #38bdf8; font-family: monospace;">WEAPON</span>
+            </label>
+            <input type="text" id="vaultSkinNameInput" class="styled-input" placeholder="e.g. AK-47 | Redline Titan Holo" style="width: 100%;">
+          </div>
+
+          <!-- 3D Thumbnail Canvas Preview Box -->
+          <div class="vault-save-thumb-box" style="width: 100%; height: 110px; background: rgba(0,0,0,0.3); border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 14px;">
+            <img id="vaultSaveThumbPreview" src="" alt="Thumbnail preview" style="max-height: 100%; object-fit: contain; display: none;" />
+          </div>
+
+          <!-- Mitigations & Options -->
+          <div class="vault-save-checkboxes" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; font-size: 0.82rem; background: rgba(255,255,255,0.02); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+            <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" id="vaultSyncPwCheck" checked>
+              <span>Synchronize Player & Dropped Models (p_*.mdl & w_*.mdl)</span>
+            </label>
+            <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" id="vaultAutoGloveCheck" checked>
+              <span>Auto-Glove Sync (Ensure hands match active loadout on equip)</span>
+            </label>
+            <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" id="vaultAmxxCheck">
+              <span>Register in in-game menu (skin_inventory.ini for AMXX /skins)</span>
+            </label>
+            <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" id="vaultEquipNowCheck">
+              <span>Equip immediately to Active Loadout</span>
+            </label>
+          </div>
+
+          <div style="display: flex; gap: 8px; justify-content: flex-end;">
+            <button type="button" id="saveToVaultCancelBtn" class="btn btn-secondary">Cancel</button>
+            <button type="button" id="saveToVaultConfirmBtn" class="btn btn-primary" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none; font-weight: 600;">
+              <svg class="glyph glyph-xs"><use href="#glyph-save"></use></svg>
+              <span>Save to Vault</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Skin Inventory Vault (CS2 Loadout Style) -->
+    <div id="vaultModal" class="modal-overlay hidden">
+      <div class="modal-card wide vault-modal-card" style="max-width: 950px; width: 92%;">
+        <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <svg class="glyph glyph-sm text-cyan"><use href="#glyph-box"></use></svg>
+            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; letter-spacing: 0.5px;">SKIN INVENTORY & VAULT</h3>
+            <span class="dock-count-badge" id="vaultTotalCountBadge" style="background: rgba(6,182,212,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); font-size: 0.75rem; padding: 2px 8px; border-radius: 999px;">0 SKINS</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button type="button" id="vaultSyncGlovesAllBtn" class="btn btn-xs btn-secondary" title="Synchronize current active gloves across all saved skins in vault">
+              <svg class="glyph glyph-xs text-cyan"><use href="#glyph-glove"></use></svg>
+              <span>Sync Active Gloves to Entire Vault</span>
+            </button>
+            <button type="button" id="vaultModalCloseBtn" class="modal-close-btn">&times;</button>
+          </div>
+        </div>
+
+        <div class="modal-body" style="padding-top: 14px;">
+          <!-- Controls Bar: Search & Category Filters -->
+          <div class="vault-controls-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 12px; flex-wrap: wrap;">
+            <div class="vault-filters drawer-pills" style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button type="button" class="filter-pill active" data-vault-filter="all">All Skins</button>
+              <button type="button" class="filter-pill" data-vault-filter="knives">Knives</button>
+              <button type="button" class="filter-pill" data-vault-filter="rifles">Rifles</button>
+              <button type="button" class="filter-pill" data-vault-filter="pistols">Pistols</button>
+              <button type="button" class="filter-pill" data-vault-filter="smgs">SMGs</button>
+              <button type="button" class="filter-pill" data-vault-filter="heavy">Heavy</button>
+            </div>
+            <div style="min-width: 220px;">
+              <input type="text" id="vaultSearchInput" class="styled-input" placeholder="Search skin name or weapon..." style="width: 100%; font-size: 0.85rem; padding: 6px 10px;">
+            </div>
+          </div>
+
+          <!-- Vault Grid Container -->
+          <div class="vault-grid" id="vaultGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; max-height: 60vh; overflow-y: auto; padding-right: 4px;">
+            <!-- Populated dynamically by vault.js -->
           </div>
         </div>
       </div>
