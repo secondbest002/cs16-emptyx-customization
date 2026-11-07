@@ -87,9 +87,19 @@ def quantize_goldsrc(
     is_masked: bool = False,
     alpha_thresh: int = 128,
     defringe: bool = True,
-    dither: str = "floyd_steinberg",
+    dither: str = "auto",
 ) -> Tuple[bytes, bytes]:
-    dither_mode = Image.Dither.NONE if str(dither).lower() in ("none", "off", "0") else Image.Dither.FLOYDSTEINBERG
+    """
+    High-Fidelity GoldSrc 8-bit IDST v10 Quantizer.
+    
+    Features:
+    1. Perceptual Palette Allocation: Evaluates candidate palettes (MaxCoverage vs MedianCut)
+       to minimize reconstruction MSE. Preserves exact lossless palette when unique colors <= 256.
+    2. Adaptive Error Diffusion: Suppresses noise grain on solid/flat gunmetal while smoothly
+       dithering high-contrast color gradients (Fade, Case Hardened).
+    3. Strict Index 255 Pinning: For masked textures, ensures solid pixels never collide with
+       transparency key (0, 0, 255), and Index 255 is strictly pinned to (0, 0, 255).
+    """
     w, h = img.width, img.height
 
     if is_masked:
@@ -106,35 +116,154 @@ def quantize_goldsrc(
 
         img_arr = np.array(img)
         solid_rgb = img_arr[:, :, :3][solid_mask]
-        solid_patch = Image.fromarray(solid_rgb.reshape(-1, 1, 3), mode="RGB")
-        q_patch = solid_patch.quantize(colors=255, method=Image.Quantize.MEDIANCUT)
+        unique_colors = np.unique(solid_rgb, axis=0)
 
-        raw_pal = list(q_patch.getpalette() or [])[: 255 * 3]
-        while len(raw_pal) < 255 * 3:
-            raw_pal.extend([0, 0, 0])
+        # 1. Optimal 255-color palette for solid pixels
+        if len(unique_colors) <= 255:
+            pal_list = []
+            for col in unique_colors:
+                c_rgb = tuple(int(x) for x in col)
+                if c_rgb == GOLDSRC_MASK_COLOR:
+                    c_rgb = (0, 0, 254)  # Avoid collision with mask key
+                pal_list.extend(c_rgb)
+            while len(pal_list) < 255 * 3:
+                pal_list.extend([0, 0, 0])
+            pal_img = Image.new("P", (1, 1))
+            pal_img.putpalette(pal_list[: 255 * 3] + [0, 0, 0])
+        else:
+            solid_patch = Image.fromarray(solid_rgb.reshape(-1, 1, 3), mode="RGB")
+            p_cov = solid_patch.quantize(colors=255, method=Image.Quantize.MAXCOVERAGE)
+            p_med = solid_patch.quantize(colors=255, method=Image.Quantize.MEDIANCUT)
 
-        raw_pal = raw_pal[: 255 * 3] + list(GOLDSRC_MASK_COLOR)
+            eval_sample = solid_rgb[:min(len(solid_rgb), 10000)].reshape(-1, 1, 3)
+            sample_img = Image.fromarray(eval_sample, mode="RGB")
+            
+            q_cov_sample = sample_img.quantize(palette=p_cov, dither=Image.Dither.NONE)
+            rec_cov = np.array(q_cov_sample.convert("RGB"), dtype=np.float32)
+            mse_cov = np.mean((eval_sample.astype(np.float32) - rec_cov) ** 2)
 
+            q_med_sample = sample_img.quantize(palette=p_med, dither=Image.Dither.NONE)
+            rec_med = np.array(q_med_sample.convert("RGB"), dtype=np.float32)
+            mse_med = np.mean((eval_sample.astype(np.float32) - rec_med) ** 2)
+
+            best_p = p_cov if mse_cov <= mse_med else p_med
+
+            raw_pal = list(best_p.getpalette() or [])[: 255 * 3]
+            while len(raw_pal) < 255 * 3:
+                raw_pal.extend([0, 0, 0])
+            
+            sanitized_pal = []
+            for i in range(0, 255 * 3, 3):
+                r, g, b = raw_pal[i], raw_pal[i+1], raw_pal[i+2]
+                if (r, g, b) == GOLDSRC_MASK_COLOR:
+                    b = 254
+                sanitized_pal.extend([r, g, b])
+            
+            pal_img = Image.new("P", (1, 1))
+            pal_img.putpalette(sanitized_pal + [0, 0, 0])
+
+        final_pal = list(pal_img.getpalette() or [])[: 255 * 3] + list(GOLDSRC_MASK_COLOR)
+
+        # 2. Dithering
         rgb_img = img.convert("RGB")
-        q_img = rgb_img.quantize(palette=q_patch, dither=dither_mode)
+        dither_choice = str(dither).lower()
+        
+        if dither_choice in ("none", "off", "0"):
+            q_img = rgb_img.quantize(palette=pal_img, dither=Image.Dither.NONE)
+            pixel_arr = np.array(q_img, dtype=np.uint8)
+        elif dither_choice in ("floyd_steinberg", "fs", "on", "1"):
+            q_img = rgb_img.quantize(palette=pal_img, dither=Image.Dither.FLOYDSTEINBERG)
+            pixel_arr = np.array(q_img, dtype=np.uint8)
+        else:
+            # Auto Adaptive Dithering
+            q_none = rgb_img.quantize(palette=pal_img, dither=Image.Dither.NONE)
+            q_fs = rgb_img.quantize(palette=pal_img, dither=Image.Dither.FLOYDSTEINBERG)
+            
+            arr_none = np.array(q_none, dtype=np.uint8)
+            arr_fs = np.array(q_fs, dtype=np.uint8)
 
-        pixel_arr = np.array(q_img, dtype=np.uint8)
+            rgb_arr = np.array(rgb_img, dtype=np.float32)
+            gx = np.abs(np.diff(rgb_arr, axis=1, prepend=rgb_arr[:, :1, :]))
+            gy = np.abs(np.diff(rgb_arr, axis=0, prepend=rgb_arr[:1, :, :]))
+            g_mag = np.mean(gx + gy, axis=-1)
+
+            is_grad_zone = g_mag > 2.0
+            pixel_arr = np.where(is_grad_zone, arr_fs, arr_none)
+
+        # 3. Pin transparent mask key strictly
         pixel_arr[pixel_arr >= 255] = 254
         pixel_arr[~solid_mask] = 255
 
-        return pixel_arr.tobytes(), bytes(raw_pal)
+        return pixel_arr.tobytes(), bytes(final_pal)
 
     else:
+        # Unmasked texture
         rgb_img = img.convert("RGB")
-        q_img = rgb_img.quantize(colors=256, method=Image.Quantize.MEDIANCUT, dither=dither_mode)
+        rgb_arr = np.array(rgb_img, dtype=np.uint8)
+        unique_colors = np.unique(rgb_arr.reshape(-1, 3), axis=0)
 
-        raw_pal = list(q_img.getpalette() or [])[: 256 * 3]
+        # 1. Lossless exact palette if <= 256 colors
+        if len(unique_colors) <= 256:
+            pal_list = []
+            for col in unique_colors:
+                pal_list.extend(col)
+            while len(pal_list) < 256 * 3:
+                pal_list.extend([0, 0, 0])
+            pal_img = Image.new("P", (1, 1))
+            pal_img.putpalette(pal_list[: 256 * 3])
+            q_img = rgb_img.quantize(palette=pal_img, dither=Image.Dither.NONE)
+            pixel_arr = np.array(q_img, dtype=np.uint8)
+            return pixel_arr.tobytes(), bytes(pal_list[: 256 * 3])
+
+        # 2. High-color image: Compare MAXCOVERAGE vs MEDIANCUT
+        p_cov = rgb_img.quantize(colors=256, method=Image.Quantize.MAXCOVERAGE)
+        p_med = rgb_img.quantize(colors=256, method=Image.Quantize.MEDIANCUT)
+
+        flat_rgb = rgb_arr.reshape(-1, 3)
+        sample_indices = np.random.choice(len(flat_rgb), min(len(flat_rgb), 10000), replace=False)
+        sample_rgb = flat_rgb[sample_indices].reshape(-1, 1, 3)
+        sample_img = Image.fromarray(sample_rgb, mode="RGB")
+
+        q_cov_sample = sample_img.quantize(palette=p_cov, dither=Image.Dither.NONE)
+        rec_cov = np.array(q_cov_sample.convert("RGB"), dtype=np.float32)
+        mse_cov = np.mean((sample_rgb.astype(np.float32) - rec_cov) ** 2)
+
+        q_med_sample = sample_img.quantize(palette=p_med, dither=Image.Dither.NONE)
+        rec_med = np.array(q_med_sample.convert("RGB"), dtype=np.float32)
+        mse_med = np.mean((sample_rgb.astype(np.float32) - rec_med) ** 2)
+
+        best_p = p_cov if mse_cov <= mse_med else p_med
+
+        raw_pal = list(best_p.getpalette() or [])[: 256 * 3]
         while len(raw_pal) < 256 * 3:
             raw_pal.extend([0, 0, 0])
-        raw_pal = raw_pal[: 256 * 3]
+        final_pal = raw_pal[: 256 * 3]
 
-        pixel_arr = np.array(q_img, dtype=np.uint8)
-        return pixel_arr.tobytes(), bytes(raw_pal)
+        # 3. Dithering
+        dither_choice = str(dither).lower()
+        if dither_choice in ("none", "off", "0"):
+            q_img = rgb_img.quantize(palette=best_p, dither=Image.Dither.NONE)
+            pixel_arr = np.array(q_img, dtype=np.uint8)
+        elif dither_choice in ("floyd_steinberg", "fs", "on", "1"):
+            q_img = rgb_img.quantize(palette=best_p, dither=Image.Dither.FLOYDSTEINBERG)
+            pixel_arr = np.array(q_img, dtype=np.uint8)
+        else:
+            # Auto Adaptive Dithering
+            q_none = rgb_img.quantize(palette=best_p, dither=Image.Dither.NONE)
+            q_fs = rgb_img.quantize(palette=best_p, dither=Image.Dither.FLOYDSTEINBERG)
+
+            arr_none = np.array(q_none, dtype=np.uint8)
+            arr_fs = np.array(q_fs, dtype=np.uint8)
+
+            rgb_f = rgb_arr.astype(np.float32)
+            gx = np.abs(np.diff(rgb_f, axis=1, prepend=rgb_f[:, :1, :]))
+            gy = np.abs(np.diff(rgb_f, axis=0, prepend=rgb_f[:1, :, :]))
+            g_mag = np.mean(gx + gy, axis=-1)
+
+            is_grad_zone = g_mag > 2.0
+            pixel_arr = np.where(is_grad_zone, arr_fs, arr_none)
+
+        return pixel_arr.tobytes(), bytes(final_pal)
 
 
 def process_image_for_texture(

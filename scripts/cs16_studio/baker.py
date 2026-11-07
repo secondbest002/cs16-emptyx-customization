@@ -308,7 +308,7 @@ def bake_multi_stickers_onto_texture(
     base_image: Union[str, Path, bytes, Image.Image],
     layers: List[Dict[str, Any]],
     weapon_key: str = "generic",
-    dither: str = "floyd_steinberg",
+    dither: str = "auto",
 ) -> Tuple[bytes, Image.Image]:
     """
     Composites multiple free-form sticker layers onto the base texture
