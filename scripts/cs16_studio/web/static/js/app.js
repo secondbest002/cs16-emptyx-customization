@@ -16,6 +16,7 @@ import { initProfilesModule } from "./modules/profiles.js";
 import { initProToolsModule, openProToolsModal } from "./modules/pro_tools.js";
 import { initChromeStudioModule, refreshChromeStatus } from "./modules/chrome_studio.js";
 import { initQoLModule } from "./modules/qol.js";
+import { initVaultModule, openSaveToVaultModal, openVaultModal } from "./modules/vault.js";
 
 // Weapon categorization schema for CS2-style Visual Loadout Drawer
 const WEAPON_CATEGORIES = {
@@ -236,6 +237,7 @@ export async function initApp() {
   try { initProToolsModule(); } catch (err) { console.error("initProToolsModule error:", err); }
   try { initChromeStudioModule(); } catch (err) { console.error("initChromeStudioModule error:", err); }
   try { initQoLModule(); } catch (err) { console.error("initQoLModule error:", err); }
+  try { initVaultModule(); } catch (err) { console.error("initVaultModule error:", err); }
   try {
     updateEngineTelemetry();
     setInterval(updateEngineTelemetry, 8000);

@@ -37,3 +37,11 @@ from .pov_manager import (
     reset_to_vanilla,
     read_current_config,
 )
+from .inventory_manager import (
+    save_to_inventory,
+    list_inventory,
+    equip_inventory_skin,
+    sync_gloves_to_inventory,
+    delete_inventory_skin,
+    toggle_amxx_registration,
+)

@@ -98,6 +98,14 @@ from ..pov_manager import (
     reset_to_vanilla as reset_pov_to_vanilla,
     validate_and_clamp as validate_and_clamp_pov,
 )
+from ..inventory_manager import (
+    save_to_inventory,
+    list_inventory,
+    equip_inventory_skin,
+    sync_gloves_to_inventory,
+    delete_inventory_skin,
+    toggle_amxx_registration,
+)
 from ..sleeve_injector import (
     SLEEVE_PRESETS,
     calculate_scale_ratio,
@@ -253,6 +261,16 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                 "profiles_dir": str(self.config.get_profiles_dir()),
                 "staging_dir": str(self.config.get_staging_dir()),
             })
+            return
+
+        elif path == "/api/inventory":
+            weapon_f = query.get("weapon", [None])[0]
+            team_f = query.get("team", [None])[0]
+            try:
+                items = list_inventory(weapon=weapon_f, team=team_f, root_dir=self.workspace_root)
+                self._send_json({"success": True, "count": len(items), "items": items})
+            except Exception as e:
+                self._send_json({"success": False, "error": str(e)}, status=500)
             return
 
         elif path in ("/api/models", "/api/weapons"):
@@ -1993,6 +2011,82 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                     self._send_json(result)
                 else:
                     self._send_json(result, status=400)
+                return
+
+            elif path == "/api/inventory/save":
+                name = req_data.get("name", "Custom Skin")
+                weapon = req_data.get("weapon", "usp")
+                team = req_data.get("team", "ct")
+                custom_path = req_data.get("path")
+                sync_pw = _safe_bool(req_data.get("sync_pw"), True)
+                register_amxx = _safe_bool(req_data.get("register_amxx"), False)
+                equip_now = _safe_bool(req_data.get("equip_now"), False)
+                thumb_b64 = req_data.get("thumb_b64") or req_data.get("thumbnail")
+                knife_variant = req_data.get("knife_variant")
+
+                res = save_to_inventory(
+                    name=name,
+                    weapon=weapon,
+                    team=team,
+                    source_mdl_path=custom_path,
+                    sync_pw=sync_pw,
+                    register_amxx=register_amxx,
+                    equip_now=equip_now,
+                    thumb_b64=thumb_b64,
+                    knife_variant=knife_variant,
+                    root_dir=self.workspace_root,
+                )
+                self._send_json(res)
+                return
+
+            elif path == "/api/inventory/equip":
+                item_id = req_data.get("id") or req_data.get("item_id")
+                team = req_data.get("team", "ct")
+                sync_active_glove = _safe_bool(req_data.get("sync_active_glove"), True)
+                if not item_id:
+                    self._send_json({"success": False, "error": "item_id is required."}, status=400)
+                    return
+                res = equip_inventory_skin(
+                    item_id_or_path=item_id,
+                    team=team,
+                    sync_active_glove=sync_active_glove,
+                    root_dir=self.workspace_root,
+                )
+                self._send_json(res)
+                return
+
+            elif path == "/api/inventory/sync_gloves":
+                preset_name = req_data.get("preset_name")
+                donor_weapon = req_data.get("donor_weapon")
+                team = req_data.get("team", "ct")
+                target_items = req_data.get("target_items")
+                res = sync_gloves_to_inventory(
+                    glove_preset_name=preset_name,
+                    donor_weapon_or_path=donor_weapon,
+                    team=team,
+                    target_item_ids=target_items,
+                    root_dir=self.workspace_root,
+                )
+                self._send_json(res)
+                return
+
+            elif path == "/api/inventory/delete":
+                item_id = req_data.get("id") or req_data.get("item_id")
+                if not item_id:
+                    self._send_json({"success": False, "error": "item_id is required."}, status=400)
+                    return
+                res = delete_inventory_skin(item_id, root_dir=self.workspace_root)
+                self._send_json(res)
+                return
+
+            elif path == "/api/inventory/toggle_amxx":
+                item_id = req_data.get("id") or req_data.get("item_id")
+                enable = _safe_bool(req_data.get("enable"), True)
+                if not item_id:
+                    self._send_json({"success": False, "error": "item_id is required."}, status=400)
+                    return
+                res = toggle_amxx_registration(item_id, enable=enable, root_dir=self.workspace_root)
+                self._send_json(res)
                 return
 
             self._send_json({"success": False, "error": "Endpoint not found"}, status=404)
