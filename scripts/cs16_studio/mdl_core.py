@@ -187,6 +187,17 @@ class MdlTexture:
         encoded = base64.b64encode(png_data).decode("ascii")
         return f"data:image/png;base64,{encoded}"
 
+    @property
+    def palette_hex(self) -> list:
+        pal = self.palette
+        hexes = []
+        for i in range(256):
+            if i * 3 + 2 < len(pal):
+                hexes.append(f"#{pal[i * 3]:02x}{pal[i * 3 + 1]:02x}{pal[i * 3 + 2]:02x}")
+            else:
+                hexes.append("#000000")
+        return hexes
+
     def to_dict(self) -> dict:
         return {
             "index": self.index,
@@ -199,6 +210,7 @@ class MdlTexture:
             "size": self.size,
             "role": self.role,
             "role_label": self.role_label,
+            "palette": self.palette_hex,
         }
 
 
@@ -1187,10 +1199,24 @@ def extract_model_3d(model_path: Union[str, Path]) -> dict:
     overall_bounds = calc_bounds(all_positions)
     weapon_bounds = calc_bounds(weapon_positions) if weapon_positions else overall_bounds
 
+    total_triangles = sum(m.get("vertex_count", 0) for m in mesh_list) // 3
+
+    textures_data = []
+    try:
+        model_obj = MdlModel(path)
+        for t in model_obj.textures:
+            tex_dict = t.to_dict()
+            tex_dict["preview"] = t.to_base64_data_uri()
+            textures_data.append(tex_dict)
+    except Exception:
+        pass
+
     return {
         "success": True,
         "mesh_count": len(mesh_list),
+        "total_triangles": total_triangles,
         "meshes": mesh_list,
+        "textures": textures_data,
         "bounds": overall_bounds,
         "weapon_bounds": weapon_bounds,
     }

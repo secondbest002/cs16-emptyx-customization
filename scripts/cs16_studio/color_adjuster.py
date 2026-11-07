@@ -709,13 +709,23 @@ def adjust_color_grading(
     final_rgb = np.clip(np.round(rgb * 255.0), 0, 255).astype(np.uint8)
     if alpha is not None:
         final_rgba = np.dstack([final_rgb, np.clip(np.round(alpha), 0, 255).astype(np.uint8)])
-        return Image.fromarray(final_rgba, mode="RGBA")
-    return Image.fromarray(final_rgb, mode="RGB").convert("RGBA")
+        out_img = Image.fromarray(final_rgba, mode="RGBA")
+    else:
+        out_img = Image.fromarray(final_rgb, mode="RGB").convert("RGBA")
+
+    # Wear & scratch patina simulation
+    wear_val = float(kwargs.get("wear", 0.0))
+    if wear_val > 0.0:
+        from .wear_simulator import apply_wear_simulation
+        out_img = apply_wear_simulation(out_img, min(1.0, max(0.0, wear_val / 100.0)))
+
+    return out_img
 
 
 def adjust_and_quantize(
     source_image: Union[str, bytes, Image.Image],
     is_masked: bool = False,
+    dither: str = "floyd_steinberg",
     **color_params,
 ) -> Tuple[bytes, Image.Image]:
     """
@@ -724,6 +734,11 @@ def adjust_and_quantize(
         (goldsrc_payload_bytes, adjusted_rgba_image)
     """
     adjusted_img = adjust_color_grading(source_image, **color_params)
-    pix_bytes, pal_bytes = quantize_goldsrc(adjusted_img, is_masked=is_masked, defringe=is_masked)
+    pix_bytes, pal_bytes = quantize_goldsrc(
+        adjusted_img,
+        is_masked=is_masked,
+        defringe=is_masked,
+        dither=dither,
+    )
     payload = pix_bytes + pal_bytes
     return payload, adjusted_img

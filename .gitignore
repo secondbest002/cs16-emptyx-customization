@@ -32,3 +32,11 @@ my_mods/staging/*.zip
 
 # System generated
 .system_generated/
+
+# Temporary Scratch & Migration Scripts
+scratch/
+scripts/patch_*.py
+scripts/search_app.py
+scripts/refine_*.py
+scripts/fix_*.py
+

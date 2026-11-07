@@ -50,6 +50,18 @@ const WEAPON_CATEGORIES = {
 };
 
 // Base weapon groups with variant definitions for Drawer Sub-Pill Navigation
+
+// Resolves tactical vector glyph based on weapon id and category
+function getTacticalWeaponGlyph(weaponId, category) {
+  const wid = (weaponId || "").toLowerCase();
+  if (category === "gear" || wid.includes("knife")) return "gear-knife";
+  if (wid === "awp" || wid === "scout" || wid === "g3sg1" || wid === "sg550") return "sniper";
+  if (category === "rifles") return "rifle";
+  if (category === "smgs") return "smg";
+  if (category === "heavy") return "heavy";
+  return "weapon"; // pistols & default tactical handgun
+}
+
 const WEAPON_GROUPS_DEF = [
   // Gear / Knives
   {
@@ -219,10 +231,19 @@ export async function initApp() {
   try { initViewer3DModule(); } catch (err) { console.error("initViewer3DModule error:", err); }
   try { initBakeModule(); } catch (err) { console.error("initBakeModule error:", err); }
   try { initLibraryModule(); } catch (err) { console.error("initLibraryModule error:", err); }
-  try { initProfilesModule(); } catch (err) { console.error("initProfilesModule error:", err); }
+  try { initProfilesModule();
+  initPwSyncPromptModal(); } catch (err) { console.error("initProfilesModule error:", err); }
   try { initProToolsModule(); } catch (err) { console.error("initProToolsModule error:", err); }
   try { initChromeStudioModule(); } catch (err) { console.error("initChromeStudioModule error:", err); }
   try { initQoLModule(); } catch (err) { console.error("initQoLModule error:", err); }
+  try {
+    updateEngineTelemetry();
+    setInterval(updateEngineTelemetry, 8000);
+    window.addEventListener("focus", updateEngineTelemetry);
+    updateTripletTelemetry();
+  } catch (err) {
+    console.error("updateEngineTelemetry error:", err);
+  }
 
   // Global event bus listeners
   eventBus.on("model:reloadRequest", () => {
@@ -234,12 +255,17 @@ export async function initApp() {
     if (team) state.currentTeam = team;
     loadActiveModel();
     updateActiveDrawerWeaponCard();
+    updateTripletTelemetry(weapon, team || state.currentTeam);
   });
 
   eventBus.on("team:toggle", (team) => {
     state.currentTeam = team;
     updateTeamButtonsUI();
     populateWeaponSelect();
+  });
+
+  eventBus.on("triplet:changed", (payload) => {
+    loadActiveModel(payload?.type);
   });
 
   // Discover and load initial model list
@@ -889,6 +915,33 @@ export function isWeaponEquippedInGame(team, weapon) {
   );
 }
 
+// Synchronizes the real-time engine telemetry status pill (Screen 1 Master Workstation)
+export async function updateEngineTelemetry() {
+  const pill = document.getElementById("engineTelemetryPill");
+  const dot = document.getElementById("engineTelemetryDot");
+  const label = document.getElementById("engineTelemetryLabel");
+  if (!pill || !dot || !label) return;
+
+  try {
+    const data = await apiGet("/api/engine/status");
+    if (data && data.is_game_running) {
+      pill.classList.remove("standalone-dcc");
+      pill.classList.add("game-running");
+      dot.className = "telemetry-pip pulse-dot-green";
+      label.textContent = "ACTIVE IN-GAME (hl.exe)";
+      pill.title = "Counter-Strike 1.6 engine (hl.exe) is currently running and synchronized";
+    } else {
+      pill.classList.remove("game-running");
+      pill.classList.add("standalone-dcc");
+      dot.className = "telemetry-pip pulse-dot-cyan";
+      label.textContent = "STANDALONE DCC";
+      pill.title = "GoldSrc IDST v10 DCC Workstation (hl.exe idle)";
+    }
+  } catch (err) {
+    // Graceful fallback
+  }
+}
+
 // Synchronizes the topbar Equip In-Game button state
 export function updateInGameEquipButton() {
   const equipBtn = document.getElementById("equipInGameBtn");
@@ -966,7 +1019,11 @@ function populateWeaponSelect() {
     elements.weaponSelect.value = state.currentWeapon;
   }
 
-  populateVisualLoadoutDrawer(models);
+  try {
+    populateVisualLoadoutDrawer(models);
+  } catch (err) {
+    console.error("Error in populateVisualLoadoutDrawer:", err);
+  }
   loadActiveModel();
 }
 
@@ -1044,7 +1101,7 @@ function populateVisualLoadoutDrawer(models) {
       card.classList.add("active");
     }
 
-    const iconType = WEAPON_CATEGORIES[targetCat]?.icon || "weapon";
+    const iconType = getTacticalWeaponGlyph(def.groupKey, targetCat);
 
     let statusClass = "clean";
     let statusText = "CLEAN";
@@ -1155,7 +1212,7 @@ function populateVisualLoadoutDrawer(models) {
       statusText = "ACTIVE";
     }
 
-    const iconType = WEAPON_CATEGORIES[targetCat]?.icon || "weapon";
+    const iconType = getTacticalWeaponGlyph(w, targetCat);
     card.innerHTML = `
       <div class="card-main-row">
         <div class="card-left">
@@ -1486,10 +1543,14 @@ function updateActiveDrawerWeaponCard() {
   updateInGameEquipButton();
 }
 
-export async function loadActiveModel() {
+export async function loadActiveModel(typeOverride = null) {
   showLoader(`Loading ${state.currentWeapon.toUpperCase()} (${state.currentTeam.toUpperCase()})...`);
   try {
-    const data = await apiGet(`/api/model?team=${state.currentTeam}&weapon=${state.currentWeapon}`);
+    if (typeOverride && state.viewport3d) {
+      state.viewport3d.tripletType = typeOverride;
+    }
+    const tripletType = typeOverride || state.viewport3d?.tripletType || "v";
+    const data = await apiGet(`/api/model?team=${state.currentTeam}&weapon=${state.currentWeapon}&type=${tripletType}`);
     state.modelData = data;
     state.pendingSlotUpdates = {};
 
@@ -1641,4 +1702,315 @@ export function setStageMode(mode) {
   if (typeof window.setStageMode === "function") {
     window.setStageMode(mode);
   }
+}
+
+
+// =========================================================================
+
+// =========================================================================
+// TRIPLET SYNC TELEMETRY CONTROLLER (FASE 3)
+// =========================================================================
+export async function updateTripletTelemetry(weapon = state.currentWeapon, team = state.currentTeam) {
+  if (!weapon) return;
+  try {
+    const res = await apiGet(`/api/triplets/status?weapon=${weapon}&team=${team}`);
+    if (!res.success) return;
+
+    // Viewmodel
+    const vName = document.getElementById("tripletNameV");
+    const vStatus = document.getElementById("tripletStatusV");
+    if (vName) vName.textContent = res.v_model.name || `v_${weapon}.mdl`;
+    if (vStatus) {
+      vStatus.textContent = res.v_model.status;
+      vStatus.className = `chip-status status-${res.v_model.status.toLowerCase()}`;
+    }
+
+    // Player Model
+    const pName = document.getElementById("tripletNameP");
+    const pStatus = document.getElementById("tripletStatusP");
+    const pBtn = document.getElementById("tripletBtnP");
+    if (pName) pName.textContent = res.p_model.name || `p_${weapon}.mdl`;
+    if (pStatus) {
+      pStatus.textContent = res.p_model.status;
+      pStatus.className = `chip-status status-${res.p_model.status.toLowerCase()}`;
+    }
+    if (pBtn) {
+      pBtn.style.opacity = res.p_model.exists ? "1" : "0.5";
+      pBtn.title = res.p_model.exists
+        ? `View Third-Person Player Model (${res.p_model.name})`
+        : `Player model (${res.p_model.name}) not found. Click Sync P/W to generate.`;
+    }
+
+    // World Model
+    const wName = document.getElementById("tripletNameW");
+    const wStatus = document.getElementById("tripletStatusW");
+    const wBtn = document.getElementById("tripletBtnW");
+    if (wName) wName.textContent = res.w_model.name || `w_${weapon}.mdl`;
+    if (wStatus) {
+      wStatus.textContent = res.w_model.status;
+      wStatus.className = `chip-status status-${res.w_model.status.toLowerCase()}`;
+    }
+    if (wBtn) {
+      wBtn.style.opacity = res.w_model.exists ? "1" : "0.5";
+      wBtn.title = res.w_model.exists
+        ? `View Ground Dropped World Model (${res.w_model.name})`
+        : `World model (${res.w_model.name}) not found. Click Sync P/W to generate.`;
+    }
+
+    // Update backup status badge
+    const backupBadge = document.getElementById("backupStatus");
+    if (backupBadge) {
+      const anyBak = res.v_model.has_backup || res.p_model.has_backup || res.w_model.has_backup;
+      backupBadge.textContent = anyBak ? "Backup Active (.orig)" : "No Backup";
+      backupBadge.classList.toggle("stat-warn", !anyBak);
+    }
+  } catch (err) {
+    console.debug("updateTripletTelemetry error:", err);
+  }
+}
+
+// =========================================================================
+// INTERACTIVE P/W MODEL SYNC PROMPT MODAL CONTROLLER (SCREEN 2 MOCKUP FIDELITY)
+// =========================================================================
+function initPwSyncPromptModal() {
+  const modal = document.getElementById("pwSyncPromptModal");
+  if (!modal) return;
+
+  const closeBtn = document.getElementById("pwPromptCloseBtn");
+  const vOnlyBtn = document.getElementById("pwPromptVOnlyBtn");
+  const syncBtn = document.getElementById("pwPromptSyncBtn");
+  const vModelLabel = document.getElementById("pwPromptVModelName");
+  const pModelLabel = document.getElementById("pwPromptPName");
+  const wModelLabel = document.getElementById("pwPromptWName");
+  const flowSourceTag = document.getElementById("flowModelSourceTag");
+  const rememberCheck = document.getElementById("pwPromptRememberCheck");
+  const choiceSync = document.getElementById("pwChoiceCardSync");
+  const choiceVOnly = document.getElementById("pwChoiceCardVOnly");
+
+  // Granular targets & animated progress
+  const targetCheckP = document.getElementById("pwCheckTargetP");
+  const targetCheckW = document.getElementById("pwCheckTargetW");
+  const targetCheckAutoBackup = document.getElementById("pwCheckAutoBackup");
+  const progressWrap = document.getElementById("pwSyncProgressWrap");
+  const stepLabel = document.getElementById("pwSyncStepLabel");
+  const pctLabel = document.getElementById("pwSyncPctLabel");
+  const progressFill = document.getElementById("pwSyncProgressFill");
+
+  // Topbar and inspector trigger buttons
+  const quickSyncBtn = document.getElementById("tripletQuickSyncBtn");
+  const dockSyncBtn = document.getElementById("dockSyncPwBtn");
+
+  const triggerManualPrompt = () => {
+    openModalForWeapon(state.currentWeapon, state.currentTeam);
+  };
+  quickSyncBtn?.addEventListener("click", triggerManualPrompt);
+  dockSyncBtn?.addEventListener("click", triggerManualPrompt);
+
+  // Preference cycle button
+  const pwPrefBtn = document.getElementById("pwPrefToggleBtn");
+  const pwPrefLabel = document.getElementById("pwPrefToggleLabel");
+
+  function updatePwPrefLabel() {
+    const pref = localStorage.getItem("cs16_pw_sync_pref") || "always_ask";
+    state.pwSyncPreference = pref;
+    if (pwPrefLabel) {
+      if (pref === "always_sync") pwPrefLabel.textContent = "P/W Sync: Auto Sync";
+      else if (pref === "never_sync") pwPrefLabel.textContent = "P/W Sync: V-Only (Never)";
+      else pwPrefLabel.textContent = "P/W Sync: Always Ask";
+    }
+  }
+  updatePwPrefLabel();
+
+  pwPrefBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const cur = localStorage.getItem("cs16_pw_sync_pref") || "always_ask";
+    let next = "always_sync";
+    if (cur === "always_ask") next = "always_sync";
+    else if (cur === "always_sync") next = "never_sync";
+    else next = "always_ask";
+
+    localStorage.setItem("cs16_pw_sync_pref", next);
+    state.pwSyncPreference = next;
+    updatePwPrefLabel();
+    showToast(`P/W Sync mode changed to: ${next.replace('_', ' ').toUpperCase()}`, "info");
+  });
+
+  let currentPending = null;
+  let selectedMode = "sync"; // 'sync' | 'v_only'
+  let isSyncing = false;
+
+  function closeModal() {
+    modal.classList.add("hidden");
+    currentPending = null;
+    isSyncing = false;
+    if (progressWrap) progressWrap.classList.add("hidden");
+    if (syncBtn) {
+      syncBtn.disabled = false;
+      syncBtn.innerHTML = '<svg class="glyph glyph-xs"><use href="#glyph-sync"></use></svg><span>Sync P/W Models Now</span>';
+    }
+    if (vOnlyBtn) vOnlyBtn.disabled = false;
+  }
+
+  function setChoice(mode) {
+    selectedMode = mode;
+    if (mode === "sync") {
+      choiceSync?.classList.add("selected");
+      choiceVOnly?.classList.remove("selected");
+      if (syncBtn) {
+        syncBtn.className = "btn btn-primary";
+        syncBtn.innerHTML = '<svg class="glyph glyph-xs"><use href="#glyph-sync"></use></svg><span>Sync P/W Models Now</span>';
+      }
+    } else {
+      choiceSync?.classList.remove("selected");
+      choiceVOnly?.classList.add("selected");
+      if (syncBtn) {
+        syncBtn.className = "btn btn-secondary";
+        syncBtn.innerHTML = '<span>Keep Viewmodel Only</span>';
+      }
+    }
+  }
+
+  choiceSync?.addEventListener("click", () => setChoice("sync"));
+  choiceVOnly?.addEventListener("click", () => setChoice("v_only"));
+  closeBtn?.addEventListener("click", () => {
+    if (!isSyncing) closeModal();
+  });
+
+  vOnlyBtn?.addEventListener("click", () => {
+    if (isSyncing) return;
+    if (rememberCheck?.checked) {
+      localStorage.setItem("cs16_pw_sync_pref", "never_sync");
+      state.pwSyncPreference = "never_sync";
+    }
+    closeModal();
+    showToast("Kept Viewmodel only (v_*.mdl). P/W models untouched.", "info");
+  });
+
+  function openModalForWeapon(weapon, team) {
+    currentPending = { weapon, team };
+    const wep = (weapon || "usp").toLowerCase();
+    if (vModelLabel) vModelLabel.textContent = `v_${wep}.mdl`;
+    if (pModelLabel) pModelLabel.textContent = `p_${wep}.mdl`;
+    if (wModelLabel) wModelLabel.textContent = `w_${wep}.mdl`;
+    if (flowSourceTag) flowSourceTag.textContent = `v_${wep}.mdl`;
+
+    setChoice("sync");
+    if (rememberCheck) rememberCheck.checked = false;
+    if (progressWrap) progressWrap.classList.add("hidden");
+    if (syncBtn) syncBtn.disabled = false;
+    if (vOnlyBtn) vOnlyBtn.disabled = false;
+    modal.classList.remove("hidden");
+  }
+
+  syncBtn?.addEventListener("click", async () => {
+    if (!currentPending || isSyncing) {
+      closeModal();
+      return;
+    }
+
+    const { weapon, team } = currentPending;
+    const shouldRemember = Boolean(rememberCheck?.checked);
+
+    if (selectedMode === "v_only") {
+      if (shouldRemember) {
+        localStorage.setItem("cs16_pw_sync_pref", "never_sync");
+        state.pwSyncPreference = "never_sync";
+      }
+      closeModal();
+      showToast("Kept Viewmodel only (v_*.mdl). P/W models untouched.", "info");
+      return;
+    }
+
+    const syncP = Boolean(targetCheckP?.checked ?? true);
+    const syncW = Boolean(targetCheckW?.checked ?? true);
+    const autoBak = Boolean(targetCheckAutoBackup?.checked ?? true);
+
+    if (!syncP && !syncW) {
+      showToast("Please check at least one target model (Player or World).", "warning");
+      return;
+    }
+
+    if (shouldRemember) {
+      localStorage.setItem("cs16_pw_sync_pref", "always_sync");
+      state.pwSyncPreference = "always_sync";
+    }
+
+    isSyncing = true;
+    if (syncBtn) {
+      syncBtn.disabled = true;
+      syncBtn.innerHTML = '<div class="spinner-sm"></div><span>Synchronizing...</span>';
+    }
+    if (vOnlyBtn) vOnlyBtn.disabled = true;
+
+    // Show and animate compilation progress bar
+    if (progressWrap) progressWrap.classList.remove("hidden");
+    const setProg = (pct, label) => {
+      if (progressFill) progressFill.style.width = `${pct}%`;
+      if (pctLabel) pctLabel.textContent = `${pct}%`;
+      if (stepLabel) stepLabel.textContent = label;
+    };
+
+    setProg(20, "Creating safe .orig.mdl backup snapshot...");
+    await new Promise((r) => setTimeout(r, 260));
+
+    setProg(50, "Extracting viewmodel UV textures & Floyd-Steinberg quantizing...");
+    await new Promise((r) => setTimeout(r, 280));
+
+    try {
+      setProg(75, `Compiling StudioModel headers for ${[syncP ? 'p_' + weapon : '', syncW ? 'w_' + weapon : ''].filter(Boolean).join(', ')}...`);
+      const res = await apiPost("/api/amxx/sync_pw", {
+        weapon: weapon,
+        team: team,
+        auto_backup: autoBak,
+        sync_p: syncP,
+        sync_w: syncW,
+      });
+
+      setProg(100, "Synchronization Complete! Triplet verified.");
+      await new Promise((r) => setTimeout(r, 350));
+
+      closeModal();
+      const pStatus = res.p_injected ? "✓ p_*.mdl" : "- p_*.mdl skipped";
+      const wStatus = res.w_injected ? "✓ w_*.mdl" : "- w_*.mdl skipped";
+      showToast(`P/W Synchronized: ${pStatus}, ${wStatus}`, "success");
+      updateTripletTelemetry(weapon, team);
+      eventBus.emit("amxx:pwSynced", { weapon, team, result: res });
+    } catch (err) {
+      showToast(`P/W Sync failed: ${err.message}`, "error");
+      closeModal();
+    }
+  });
+
+  // Listen for pw:promptSync event from slots.js or other modules
+  eventBus.on("pw:promptSync", async (data) => {
+    const pref = state.pwSyncPreference || localStorage.getItem("cs16_pw_sync_pref") || "always_ask";
+
+    if (pref === "always_sync") {
+      showLoader(`Auto-syncing P & W models for ${data.weapon.toUpperCase()}...`);
+      try {
+        const res = await apiPost("/api/amxx/sync_pw", {
+          weapon: data.weapon,
+          team: data.team,
+          auto_backup: true,
+          sync_p: true,
+          sync_w: true,
+        });
+        showToast(`Auto-synced P & W models for ${data.weapon.toUpperCase()}`, "success");
+        updateTripletTelemetry(data.weapon, data.team);
+        eventBus.emit("amxx:pwSynced", { weapon: data.weapon, team: data.team, result: res });
+      } catch (err) {
+        showToast(`Auto P/W Sync failed: ${err.message}`, "error");
+      } finally {
+        hideLoader();
+      }
+      return;
+    }
+
+    if (pref === "never_sync") {
+      return;
+    }
+
+    // Default: Show interactive Titanium prompt modal
+    openModalForWeapon(data.weapon, data.team);
+  });
 }

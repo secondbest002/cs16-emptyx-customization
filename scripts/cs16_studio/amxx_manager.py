@@ -529,6 +529,8 @@ def sync_pw_models(
     p_model_path: Optional[Union[str, Path]] = None,
     w_model_path: Optional[Union[str, Path]] = None,
     include_stickers: bool = False,
+    sync_p: bool = True,
+    sync_w: bool = True,
 ) -> dict:
     """
     Bakes viewmodel (v_*.mdl) textures & decals and injects into corresponding
@@ -747,9 +749,9 @@ def sync_pw_models(
             return True
         return False
 
-    if resolved_p:
+    if resolved_p and sync_p:
         results["p_injected"] = inject_target(resolved_p)
-    if resolved_w:
+    if resolved_w and sync_w:
         results["w_injected"] = inject_target(resolved_w)
 
     synced_names = []
@@ -764,3 +766,159 @@ def sync_pw_models(
         results["message"] = "No matching textures could be injected into P/W models."
 
     return results
+
+
+def resolve_triplet_models(
+    weapon: str,
+    team: str = "ct",
+    root_dir: Optional[Union[str, Path]] = None,
+) -> dict:
+    """
+    Resolves triplet file paths (v_, p_, w_) for the specified weapon and team.
+    Returns:
+        dict: {'v': Path or None, 'p': Path or None, 'w': Path or None}
+    """
+    root = Path(root_dir).resolve() if root_dir else config.get_game_root()
+    w_clean = _clean_weapon_key(weapon)
+    team_clean = team.lower().strip()
+
+    # 1. Resolve Viewmodel (v_*.mdl)
+    try:
+        v_path = resolve_model_path(w_clean, team=team_clean, root_dir=root)
+        if not (v_path and v_path.is_file()):
+            v_path = None
+    except Exception:
+        v_path = None
+
+    # 2. Check skin_inventory.ini for custom p_ and w_ model definitions
+    inv_file = root / SKIN_INVENTORY_REL
+    if not inv_file.is_file():
+        inv_file = root / "cstrike" / "addons" / "amxmodx" / "configs" / "skin_inventory.ini"
+    catalog = parse_skin_inventory(inv_file) if inv_file.is_file() else {}
+    target_entry = None
+
+    target_slot_key = WEAPON_TO_SLOT.get(w_clean, w_clean.upper())
+    for entry in catalog.get(team_clean, {}).get(target_slot_key, []):
+        if entry.get("weapon_key") == w_clean:
+            target_entry = entry
+            break
+
+    if not target_entry:
+        other_team = "t" if team_clean == "ct" else "ct"
+        for s_key, entries in catalog.get(other_team, {}).items():
+            for entry in entries:
+                if entry.get("weapon_key") == w_clean:
+                    target_entry = entry
+                    break
+            if target_entry:
+                break
+
+    pw_dir = root / PW_MODELS_DIR_REL
+    if not pw_dir.is_dir():
+        pw_dir = root / "cstrike" / "models" / "pw_models"
+
+    def find_target(entry_key: str, prefix: str) -> Optional[Path]:
+        if target_entry and target_entry.get(entry_key):
+            cand = root / "cstrike" / target_entry[entry_key]
+            if cand.is_file():
+                return cand.resolve()
+            cand2 = root / target_entry[entry_key]
+            if cand2.is_file():
+                return cand2.resolve()
+
+        search_dirs = [pw_dir]
+        for extra in [root / "cstrike" / "models", root / "cstrike_hd" / "models"]:
+            if extra.is_dir() and extra not in search_dirs:
+                search_dirs.append(extra)
+
+        for sdir in search_dirs:
+            direct = sdir / f"{prefix}_{w_clean}.mdl"
+            if direct.is_file():
+                return direct.resolve()
+            if "knife" in w_clean:
+                knife_cand = sdir / f"{prefix}_knife.mdl"
+                if knife_cand.is_file():
+                    return knife_cand.resolve()
+            if "cz75" in w_clean:
+                cz_cand = sdir / f"{prefix}_cz75.mdl"
+                if cz_cand.is_file():
+                    return cz_cand.resolve()
+        return None
+
+    p_path = find_target("p_model", "p")
+    w_path = find_target("w_model", "w")
+
+    return {
+        "v": v_path,
+        "p": p_path,
+        "w": w_path,
+    }
+
+
+def get_triplet_status(
+    weapon: str,
+    team: str = "ct",
+    root_dir: Optional[Union[str, Path]] = None,
+) -> dict:
+    """
+    Returns real-time sync telemetry for weapon triplets (v_, p_, w_).
+    """
+    import datetime
+    triplets = resolve_triplet_models(weapon=weapon, team=team, root_dir=root_dir)
+    w_clean = _clean_weapon_key(weapon)
+    team_clean = team.lower().strip()
+
+    v_path = triplets.get("v")
+    p_path = triplets.get("p")
+    w_path = triplets.get("w")
+
+    v_mtime = v_path.stat().st_mtime if v_path and v_path.is_file() else 0.0
+
+    def get_info(path: Optional[Path], prefix: str) -> dict:
+        if not path or not path.is_file():
+            return {
+                "name": f"{prefix}_{w_clean}.mdl",
+                "path": str(path) if path else None,
+                "exists": False,
+                "size_kb": 0,
+                "mtime": 0,
+                "mtime_str": "Not Found",
+                "has_backup": False,
+                "synced": False,
+                "status": "MISSING",
+            }
+
+        st = path.stat()
+        mtime = st.st_mtime
+        mtime_str = datetime.datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
+        size_kb = round(st.st_size / 1024, 1)
+
+        has_bak = path.with_suffix(".mdl.bak").exists() or (path.parent / (path.stem + ".orig.mdl")).exists()
+
+        if prefix == "v":
+            synced = True
+            status = "ACTIVE"
+        else:
+            synced = (mtime >= v_mtime - 2.0) if v_mtime > 0 else True
+            status = "SYNCED" if synced else "PENDING"
+
+        return {
+            "name": path.name,
+            "path": str(path),
+            "exists": True,
+            "size_kb": size_kb,
+            "mtime": mtime,
+            "mtime_str": mtime_str,
+            "has_backup": has_bak,
+            "synced": synced,
+            "status": status,
+        }
+
+    return {
+        "success": True,
+        "weapon": w_clean,
+        "team": team_clean,
+        "v_model": get_info(v_path, "v"),
+        "p_model": get_info(p_path, "p"),
+        "w_model": get_info(w_path, "w"),
+    }
