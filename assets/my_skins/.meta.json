@@ -12,5 +12,12 @@
     "weapon": "usp",
     "weapon_category": "pistols",
     "category": "Pistols"
+  },
+  "sport_gloves_pandora.png": {
+    "name": "Pandora",
+    "skin_name": "Pandora",
+    "weapon": "sport_gloves",
+    "weapon_category": "gloves",
+    "category": "Gloves"
   }
 }

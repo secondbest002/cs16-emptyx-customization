@@ -2287,6 +2287,7 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                 custom_donor_path = req_data.get("donor_path")
                 scale_override = req_data.get("scale_override")
                 auto_backup = _safe_bool(req_data.get("auto_backup"), True)
+                cuff_offset = _safe_float(req_data.get("cuff_offset"), 0.0)
 
                 scale_ratio = _safe_float(scale_override, 0.0) if scale_override is not None else None
                 if scale_ratio == 0.0:
@@ -2306,6 +2307,7 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                     donor_path=donor_p,
                     donor_preset=donor_preset,
                     scale_ratio=scale_ratio,
+                    cuff_offset=cuff_offset,
                     create_backup=auto_backup,
                     workspace_root=self.workspace_root,
                 )
@@ -2486,6 +2488,8 @@ def create_server(host: str = "127.0.0.1", port: int = 5160, workspace_root: Opt
     def handler(*args, **kwargs):
         return StudioApiHandler(*args, workspace_root=root, **kwargs)
 
+    ThreadingHTTPServer.request_queue_size = 128
+    ThreadingHTTPServer.allow_reuse_address = True
     server = ThreadingHTTPServer((host, port), handler)
     server.daemon_threads = True
     return server

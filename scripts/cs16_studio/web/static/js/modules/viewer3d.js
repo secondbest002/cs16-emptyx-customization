@@ -6,6 +6,7 @@
 
 import { state, eventBus } from "../core/state.js";
 import { apiGet, apiPost, showToast, showLoader, hideLoader } from "../core/api.js";
+import { getScrapedStickerCanvas, getScrapeConditionName } from "./sticker_scraper_client.js";
 
 const els = {
   get v3dCanvasContainer() { return document.getElementById("viewport3dCanvasContainer"); },
@@ -44,9 +45,24 @@ const els = {
   get hudSeqPlayBtn() { return document.getElementById("hudSeqPlayBtn"); },
   get hudSeqScrubber() { return document.getElementById("hudSeqScrubber"); },
   get hudSeqFrameDisplay() { return document.getElementById("hudSeqFrameDisplay"); },
+
+  // CS2 3D Decal Stamping & Quick Scrape HUD Elements
+  get v3dStampBanner() { return document.getElementById("v3dStampBanner"); },
+  get v3dStampModeBtn() { return document.getElementById("v3dStampModeBtn"); },
+  get v3dScrapeCoinQuickBtn() { return document.getElementById("v3dScrapeCoinQuickBtn"); },
+  get v3dStampCancelBtn() { return document.getElementById("v3dStampCancelBtn"); },
+  get v3dStampScaleLabel() { return document.getElementById("v3dStampScaleLabel"); },
+  get v3dStampRotLabel() { return document.getElementById("v3dStampRotLabel"); },
+  get v3dQuickScrapeSlider() { return document.getElementById("v3dQuickScrapeSlider"); },
+  get v3dQuickScrapeVal() { return document.getElementById("v3dQuickScrapeVal"); },
+  get v3dQuickScrapeCoinBtn() { return document.getElementById("v3dQuickScrapeCoinBtn"); },
 };
 
 let repositionReticleMesh = null;
+let stampGhostDecalMesh = null;
+let stampScale = 1.0;
+let stampRotation = 0.0;
+let stampScrape = 0.0;
 let currentHoverHit = null;
 let pointerDownPos = { x: 0, y: 0, time: 0 };
 
@@ -251,6 +267,15 @@ export function updateStatTrak3D(color, number, reset = false) {
 export function initViewer3DModule() {
   setupToolbarEvents();
   setupRepositionBannerEvents();
+  setupStampEvents();
+  // Listen to model updates to trigger 3D reload (race-condition resilient)
+  eventBus.on("model:loaded", () => {
+    if (state.viewport3d.initialized) {
+      load3DModelGeometry();
+    } else {
+      state.viewport3d.pendingModelReload = true;
+    }
+  });
 
   // Listen to model updates to trigger 3D reload
   eventBus.on("model:loaded", () => {
@@ -291,6 +316,41 @@ export function initViewer3DModule() {
         return;
       }
       triggerInspectAnimation();
+    }
+    if (e.key === "s" || e.key === "S") {
+      const activeEl = document.activeElement;
+      if (activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.isContentEditable)) {
+        return;
+      }
+      toggleStampMode();
+    }
+    if (e.key === "Escape" && state.viewport3d.stampMode) {
+      exitStampMode();
+      showToast("3D Stamp Mode exited.", "info");
+    }
+  });
+
+  // Synchronize active layer changes from Bake canvas into 3D stamp ghost & scrape HUD
+  eventBus.on("bake:activeLayerChanged", ({ layer }) => {
+    if (layer) {
+      stampScale = layer.scale || 1.0;
+      stampRotation = layer.rotation || 0.0;
+      stampScrape = layer.scrape || 0;
+      if (els.v3dQuickScrapeSlider) els.v3dQuickScrapeSlider.value = stampScrape;
+      if (els.v3dQuickScrapeVal) els.v3dQuickScrapeVal.textContent = `${stampScrape}%`;
+      updateStampBannerHUD();
+      if (state.viewport3d.stampMode) {
+        updateStampGhostTexture();
+      }
+    }
+  });
+
+  eventBus.on("bake:scrapeSync", ({ scrape }) => {
+    stampScrape = scrape;
+    if (els.v3dQuickScrapeSlider) els.v3dQuickScrapeSlider.value = scrape;
+    if (els.v3dQuickScrapeVal) els.v3dQuickScrapeVal.textContent = `${scrape}%`;
+    if (state.viewport3d.stampMode) {
+      updateStampGhostTexture();
     }
   });
 
@@ -585,6 +645,10 @@ export async function init3DScene() {
   repositionReticleMesh = createGhostDecalCursor();
   scene.add(repositionReticleMesh);
 
+  // 7b. 3D Decal Stamp Projector Cursor (CS2-Style)
+  stampGhostDecalMesh = create3DStampGhostDecal();
+  scene.add(stampGhostDecalMesh);
+
   // 8. Dynamic FPV Bullet Trajectory Raycast & Impact Reticle
   const trajPositions = new Float32Array(6);
   const trajGeom = new THREE.BufferGeometry();
@@ -622,6 +686,10 @@ export async function init3DScene() {
   state.viewport3d.controls = controls;
   state.viewport3d.meshGroup = meshGroup;
   state.viewport3d.initialized = true;
+  if (state.viewport3d.pendingModelReload) {
+    state.viewport3d.pendingModelReload = false;
+    load3DModelGeometry();
+  }
 
   // Responsive resize system using native ResizeObserver to prevent canvas stretching during panel toggles & transitions
   const updateViewportSize = (explicitW, explicitH) => {
@@ -1895,6 +1963,30 @@ function setupRaycastAndRepositionInteractions(domElement, camera, meshGroup) {
   }
 
   domElement.addEventListener("pointermove", (e) => {
+    // 0. CS2-Style 3D Decal Stamping Hover
+    if (state.viewport3d.stampMode && meshGroup) {
+      const rect = domElement.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+
+      const validMeshes = meshGroup.children.filter(
+        (m) => m.isMesh && m.visible && !m.userData.isGlove && m.userData.role !== "glove" && m.userData.role !== "sleeve"
+      );
+
+      const intersects = raycaster.intersectObjects(validMeshes, false);
+      if (intersects.length > 0 && intersects[0].uv) {
+        currentHoverHit = intersects[0];
+        updateStampGhostTransform(currentHoverHit);
+        domElement.style.cursor = "crosshair";
+      } else {
+        currentHoverHit = null;
+        if (stampGhostDecalMesh) stampGhostDecalMesh.visible = false;
+        domElement.style.cursor = "";
+      }
+      return;
+    }
+
     // 1. In-place Slot Repositioning Hover
     if (state.viewport3d.repositionMode && meshGroup) {
       const rect = domElement.getBoundingClientRect();
@@ -1974,6 +2066,12 @@ function setupRaycastAndRepositionInteractions(domElement, camera, meshGroup) {
     if (e.button === 0) {
       pointerDownPos = { x: e.clientX, y: e.clientY, time: Date.now() };
 
+      // 0. CS2-Style 3D Decal Stamp click
+      if (state.viewport3d.stampMode && currentHoverHit && currentHoverHit.uv) {
+        execute3DDecalStamp(currentHoverHit);
+        return;
+      }
+
       // Check if user is starting a 3D Surface Bake Drag
       if (!state.viewport3d.repositionMode && isBakeModeEligible() && meshGroup) {
         const rect = domElement.getBoundingClientRect();
@@ -2011,6 +2109,22 @@ function setupRaycastAndRepositionInteractions(domElement, camera, meshGroup) {
       }
     }
   });
+
+  // CS2-Style 3D Decal Stamp Real-Time Scale & Rotation with Mouse Wheel
+  domElement.addEventListener("wheel", (e) => {
+    if (state.viewport3d.stampMode && stampGhostDecalMesh && stampGhostDecalMesh.visible) {
+      e.preventDefault();
+      if (e.shiftKey) {
+        stampRotation = (stampRotation + (e.deltaY > 0 ? 15 : -15) + 360) % 360;
+      } else {
+        stampScale = Math.max(0.2, Math.min(2.5, stampScale + (e.deltaY > 0 ? -0.05 : 0.05)));
+      }
+      if (currentHoverHit) {
+        updateStampGhostTransform(currentHoverHit);
+      }
+      updateStampBannerHUD();
+    }
+  }, { passive: false });
 
   window.addEventListener("pointerup", (e) => {
     // Release 3D surface dragging
@@ -2358,5 +2472,367 @@ export async function takeHighResSnapshot(options = {}) {
     if (state.viewport3d.repositionMode && currentHoverHit) {
       updateGhostTransform(currentHoverHit);
     }
+  }
+}
+
+
+// =========================================================================
+// CS2-Style 3D Decal Stamping & Real-Time Scrape Engine
+// =========================================================================
+
+/**
+ * Creates the holographic 3D ghost decal projector cursor
+ */
+function create3DStampGhostDecal() {
+  const group = new THREE.Group();
+
+  // 1. Decal projection plane
+  const planeGeom = new THREE.PlaneGeometry(1, 1);
+  const planeMat = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.92,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -1.0,
+  });
+  const planeMesh = new THREE.Mesh(planeGeom, planeMat);
+  planeMesh.name = "stampDecalPlane";
+  group.add(planeMesh);
+
+  // 2. Neon cyan corner bracket frame
+  const edgeGeom = new THREE.EdgesGeometry(planeGeom);
+  const edgeMat = new THREE.LineBasicMaterial({
+    color: 0x00f0ff,
+    linewidth: 2,
+    transparent: true,
+    opacity: 0.9,
+  });
+  const edgeLines = new THREE.LineSegments(edgeGeom, edgeMat);
+  edgeLines.position.z = 0.005;
+  group.add(edgeLines);
+
+  // 3. Directional top pointer pip
+  const pipGeom = new THREE.ConeGeometry(0.08, 0.16, 8);
+  pipGeom.rotateZ(Math.PI);
+  const pipMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
+  const pipMesh = new THREE.Mesh(pipGeom, pipMat);
+  pipMesh.position.set(0, 0.58, 0.006);
+  group.add(pipMesh);
+
+  group.visible = false;
+  return group;
+}
+
+/**
+ * Updates 3D stamp ghost decal material texture from active sticker
+ */
+export function updateStampGhostTexture() {
+  if (!stampGhostDecalMesh || typeof THREE === "undefined") return;
+
+  const planeMesh = stampGhostDecalMesh.getObjectByName("stampDecalPlane");
+  if (!planeMesh || !planeMesh.material) return;
+
+  const layers = state.bake?.layers || [];
+  const active = layers.find((l) => l.id === state.bake?.activeLayerId) || layers[layers.length - 1];
+
+  if (active && (active.img || active.previewUri)) {
+    stampScale = active.scale || 1.0;
+    stampRotation = active.rotation || 0.0;
+    stampScrape = active.scrape || 0;
+
+    let src = active.img;
+    if (active.scrape > 0 && typeof getScrapedStickerCanvas === "function") {
+      src = getScrapedStickerCanvas(active.img, active.scrape, 1337, active.id || active.name);
+    }
+
+    if (src) {
+      let canvas = src;
+      if (!(src instanceof HTMLCanvasElement)) {
+        canvas = document.createElement("canvas");
+        canvas.width = src.width || 256;
+        canvas.height = src.height || 256;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(src, 0, 0);
+      }
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.magFilter = THREE.LinearFilter;
+      tex.minFilter = THREE.LinearFilter;
+      tex.generateMipmaps = false;
+
+      if (planeMesh.material.map && typeof planeMesh.material.map.dispose === "function") {
+        planeMesh.material.map.dispose();
+      }
+      planeMesh.material.map = tex;
+      planeMesh.material.color = new THREE.Color(0xffffff);
+      planeMesh.material.opacity = 0.94;
+      planeMesh.material.needsUpdate = true;
+    }
+  } else {
+    // Auto-fetch first sticker from library if no layers are currently on staging canvas
+    if (typeof apiGet === "function") {
+      apiGet("/api/library/stickers").then((res) => {
+        if (res && res.success && res.stickers && res.stickers.length > 0) {
+          const first = res.stickers[0];
+          eventBus.emit("bake:loadSticker", {
+            previewUri: first.preview || first.thumbnail,
+            path: first.path,
+            name: first.name,
+          });
+        }
+      }).catch(() => {});
+    }
+
+    if (planeMesh.material.map && typeof planeMesh.material.map.dispose === "function") {
+      planeMesh.material.map.dispose();
+      planeMesh.material.map = null;
+    }
+    planeMesh.material.color = new THREE.Color(0x00f0ff);
+    planeMesh.material.opacity = 0.35;
+    planeMesh.material.needsUpdate = true;
+  }
+}
+
+/**
+ * Updates holographic ghost decal position, surface orientation, rotation and scale
+ */
+function updateStampGhostTransform(hit) {
+  if (!stampGhostDecalMesh || !hit || !hit.point || !hit.face) return;
+
+  const worldNormal = getHitWorldNormal(hit);
+
+  // Position flush on surface with tiny offset to prevent z-fighting
+  const offset = worldNormal.clone().multiplyScalar(0.05);
+  stampGhostDecalMesh.position.copy(hit.point.clone().add(offset));
+
+  // Align with polygon normal in world space
+  stampGhostDecalMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), worldNormal);
+
+  // Apply in-plane rotation angle
+  stampGhostDecalMesh.rotateZ(((stampRotation || 0) * Math.PI) / 180);
+
+  // Scale decal proportional to weapon mesh bounds and stampScale
+  const wb = state.viewport3d.currentWeaponBounds || state.viewport3d.currentBounds;
+  const radius = wb && wb.radius ? wb.radius : 15;
+  const baseDim = radius * 0.25 * (stampScale || 1.0);
+  stampGhostDecalMesh.scale.set(baseDim, baseDim, 1);
+
+  stampGhostDecalMesh.visible = true;
+}
+
+/**
+ * Updates telemetry labels in the 3D Stamp Banner HUD
+ */
+function updateStampBannerHUD() {
+  if (els.v3dStampScaleLabel) {
+    els.v3dStampScaleLabel.textContent = `${(stampScale || 1.0).toFixed(2)}x`;
+  }
+  if (els.v3dStampRotLabel) {
+    els.v3dStampRotLabel.textContent = `${Math.round(stampRotation || 0)}°`;
+  }
+  if (els.v3dQuickScrapeSlider) {
+    els.v3dQuickScrapeSlider.value = stampScrape || 0;
+  }
+  if (els.v3dQuickScrapeVal) {
+    els.v3dQuickScrapeVal.textContent = `${Math.round(stampScrape || 0)}%`;
+  }
+}
+
+/**
+ * Creates an expanding cyan shockwave ripple animation at the stamped surface point
+ */
+function triggerStampRippleEffect(point, normal) {
+  if (!state.viewport3d.scene || typeof THREE === "undefined") return;
+
+  const ringGeom = new THREE.RingGeometry(0.08, 0.22, 24);
+  const ringMat = new THREE.MeshBasicMaterial({
+    color: 0x00f0ff,
+    transparent: true,
+    opacity: 0.95,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const ringMesh = new THREE.Mesh(ringGeom, ringMat);
+  ringMesh.position.copy(point.clone().add(normal.clone().multiplyScalar(0.08)));
+  ringMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
+  state.viewport3d.scene.add(ringMesh);
+
+  const startTime = performance.now();
+  const duration = 400;
+
+  function animateRipple() {
+    const elapsed = performance.now() - startTime;
+    const progress = Math.min(1.0, elapsed / duration);
+
+    const scale = 1.0 + progress * 2.8;
+    ringMesh.scale.set(scale, scale, 1);
+    ringMat.opacity = 0.95 * (1.0 - progress);
+
+    if (progress < 1.0) {
+      requestAnimationFrame(animateRipple);
+    } else {
+      state.viewport3d.scene.remove(ringMesh);
+      ringGeom.dispose();
+      ringMat.dispose();
+    }
+  }
+  requestAnimationFrame(animateRipple);
+}
+
+/**
+ * Executes CS2-Style 3D Decal Stamp onto the clicked weapon surface
+ */
+export function execute3DDecalStamp(hit) {
+  if (!hit || !hit.uv) return;
+
+  const texIdx = hit.object?.userData?.textureIndex;
+  const availableTextures = state.modelData?.textures || [];
+  const texEntry = availableTextures.find((t) => t.index === texIdx);
+  const texW = texEntry?.width || state.bake?.baseImg?.width || 512;
+  const texH = texEntry?.height || state.bake?.baseImg?.height || 512;
+
+  const px = Math.round(hit.uv.x * texW);
+  const py = Math.round((1.0 - hit.uv.y) * texH);
+  const worldNormal = getHitWorldNormal(hit);
+
+  // Trigger tactile 3D visual shockwave
+  triggerStampRippleEffect(hit.point, worldNormal);
+
+  // Broadcast stamping event to Bake compositor
+  eventBus.emit("bake:stamp3D", {
+    x: px,
+    y: py,
+    textureIndex: texIdx,
+    scale: stampScale,
+    rotation: stampRotation,
+    scrape: stampScrape,
+  });
+
+  // Play subtle feedback audio if available
+  try {
+    const audio = new Audio("data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU"+Array(80).join("AP8A"));
+    audio.volume = 0.25;
+    audio.play().catch(() => {});
+  } catch (_) {}
+}
+
+/**
+ * Enters CS2-Style 3D Decal Stamp Mode
+ */
+export function enterStampMode() {
+  if (state.viewport3d.repositionMode) {
+    exitSlotRepositionMode();
+  }
+  state.viewport3d.stampMode = true;
+
+  if (els.v3dCanvasContainer) {
+    els.v3dCanvasContainer.classList.add("stamp-active");
+  }
+  if (els.v3dStampBanner) {
+    els.v3dStampBanner.classList.remove("hidden");
+  }
+  if (els.v3dStampModeBtn) {
+    els.v3dStampModeBtn.classList.add("active");
+  }
+
+  // Adjust OrbitControls: Left Click is for stamping, Right Click rotates camera
+  if (state.viewport3d.controls && typeof THREE !== "undefined") {
+    state.viewport3d.controls.mouseButtons = {
+      LEFT: THREE.MOUSE.NONE,
+      MIDDLE: THREE.MOUSE.DOLLY,
+      RIGHT: THREE.MOUSE.ROTATE,
+    };
+  }
+
+  updateStampGhostTexture();
+  updateStampBannerHUD();
+  showToast("3D Decal Stamp Mode active: Click weapon surface to stamp sticker!", "info");
+}
+
+/**
+ * Exits 3D Decal Stamp Mode and restores default camera controls
+ */
+export function exitStampMode() {
+  state.viewport3d.stampMode = false;
+
+  if (els.v3dCanvasContainer) {
+    els.v3dCanvasContainer.classList.remove("stamp-active");
+  }
+  if (els.v3dStampBanner) {
+    els.v3dStampBanner.classList.add("hidden");
+  }
+  if (els.v3dStampModeBtn) {
+    els.v3dStampModeBtn.classList.remove("active");
+  }
+  if (stampGhostDecalMesh) {
+    stampGhostDecalMesh.visible = false;
+  }
+
+  // Restore standard OrbitControls
+  if (state.viewport3d.controls && typeof THREE !== "undefined") {
+    state.viewport3d.controls.mouseButtons = {
+      LEFT: THREE.MOUSE.ROTATE,
+      MIDDLE: THREE.MOUSE.DOLLY,
+      RIGHT: THREE.MOUSE.PAN,
+    };
+  }
+}
+
+/**
+ * Toggles 3D Decal Stamp Mode on or off
+ */
+export function toggleStampMode() {
+  if (state.viewport3d.stampMode) {
+    exitStampMode();
+  } else {
+    enterStampMode();
+  }
+}
+
+/**
+ * Sets up button and slider event listeners for 3D Decal Stamping & Coin Scrape
+ */
+function setupStampEvents() {
+  if (els.v3dStampModeBtn) {
+    els.v3dStampModeBtn.addEventListener("click", () => {
+      toggleStampMode();
+    });
+  }
+
+  if (els.v3dStampCancelBtn) {
+    els.v3dStampCancelBtn.addEventListener("click", () => {
+      exitStampMode();
+      showToast("3D Stamp Mode exited.", "info");
+    });
+  }
+
+  // Coin Scrape (+10% wear) quick button in Floating HUD
+  if (els.v3dScrapeCoinQuickBtn) {
+    els.v3dScrapeCoinQuickBtn.addEventListener("click", () => {
+      eventBus.emit("bake:setScrape", { delta: 10 });
+      showToast("Scratched active sticker (+10% coin scrape)!", "info");
+    });
+  }
+
+  // Coin Scrape button in Stamp Banner
+  if (els.v3dQuickScrapeCoinBtn) {
+    els.v3dQuickScrapeCoinBtn.addEventListener("click", () => {
+      eventBus.emit("bake:setScrape", { delta: 10 });
+      showToast("Scratched active sticker (+10% coin scrape)!", "info");
+    });
+  }
+
+  // Quick Scrape Slider in Stamp Banner
+  if (els.v3dQuickScrapeSlider) {
+    els.v3dQuickScrapeSlider.addEventListener("input", (e) => {
+      const val = parseInt(e.target.value, 10);
+      stampScrape = val;
+      if (els.v3dQuickScrapeVal) {
+        els.v3dQuickScrapeVal.textContent = `${val}%`;
+      }
+      eventBus.emit("bake:setScrape", { scrape: val });
+    });
   }
 }

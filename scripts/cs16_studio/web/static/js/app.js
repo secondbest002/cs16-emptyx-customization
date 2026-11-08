@@ -281,7 +281,7 @@ export async function initApp() {
 
   // Initialize 3D Hero Viewport immediately
   try {
-    initOrUpdate3DViewer();
+    initOrUpdate3DViewer().catch((err) => console.error("initOrUpdate3DViewer error:", err));
   } catch (err) {
     console.error("initOrUpdate3DViewer error:", err);
   }
@@ -826,7 +826,7 @@ function setupNavigation() {
       if (tabName === "color") {
         setupColorStudioTab();
       } else if (tabName === "viewport3d") {
-        initOrUpdate3DViewer();
+        initOrUpdate3DViewer().catch((err) => console.error("initOrUpdate3DViewer error:", err));
       } else if (tabName === "bake") {
         setupBakeTab();
       } else if (tabName === "gloves") {

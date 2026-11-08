@@ -501,6 +501,29 @@
               <button type="button" id="v3dRepositionCancelBtn" class="btn btn-xs btn-secondary" title="Cancel repositioning (Esc)">Cancel (Esc)</button>
             </div>
 
+                        <!-- Floating CS2-Style 3D Decal Stamping Banner -->
+            <div id="v3dStampBanner" class="v3d-stamp-banner hidden">
+              <div class="stamp-banner-content">
+                <div class="stamp-info-main">
+                  <span class="pulse-pip-cyan"></span>
+                  <strong>3D Decal Stamp Mode:</strong> Click weapon surface to stamp.
+                  <span class="stamp-controls-hint">
+                    <kbd>Click</kbd> Stamp • <kbd>Scroll</kbd> Scale (<span id="v3dStampScaleLabel">1.0x</span>) • <kbd>Shift+Scroll</kbd> Rot (<span id="v3dStampRotLabel">0°</span>)
+                  </span>
+                </div>
+                <div class="stamp-quick-scrape-group">
+                  <label for="v3dQuickScrapeSlider" style="font-size: 0.74rem; font-weight: 600; color: var(--accent-gold); display: flex; align-items: center; gap: 4px; margin: 0;">
+                    <svg class="glyph glyph-xs text-amber"><use href="#glyph-sparkle"></use></svg> Scrape: <span id="v3dQuickScrapeVal">0%</span>
+                  </label>
+                  <input type="range" id="v3dQuickScrapeSlider" min="0" max="100" step="5" value="0" class="slider mini-slider" style="width: 80px;">
+                  <button type="button" id="v3dQuickScrapeCoinBtn" class="btn btn-xs btn-secondary" title="Simulate scratching sticker with a coin (+10%)">
+                    🪙 Coin Scrape
+                  </button>
+                </div>
+                <button type="button" id="v3dStampCancelBtn" class="btn btn-xs btn-secondary" title="Exit Stamp Mode (Esc)">Done (Esc)</button>
+              </div>
+            </div>
+
             <!-- Sliding First-Person POV Drawer (Screen 4 Mockup High Fidelity) -->
             <div id="v3dPovDrawer" class="v3d-pov-drawer hidden">
               <div class="pov-drawer-header">
@@ -648,6 +671,13 @@
 
                 <!-- CLUSTER B: MESH & STUDIO OVERLAYS -->
                 <div class="hud-cluster" data-cluster="overlays">
+                  <button type="button" class="hud-pill-btn glow-cyan" id="v3dStampModeBtn" title="CS2 3D Decal Stamp Mode: Click anywhere on 3D weapon to stamp sticker (Shortcut: S)">
+                    <svg class="glyph glyph-xs"><use href="#glyph-target"></use></svg>
+                    <span>Stamp (3D)</span>
+                  </button>
+                  <button type="button" class="hud-pill-btn icon-only" id="v3dScrapeCoinQuickBtn" title="Coin Scrape: Scratch active sticker wear (+10%)">
+                    <span style="font-size: 0.85rem; line-height: 1;">🪙</span>
+                  </button>
                   <button type="button" class="hud-pill-btn icon-only" id="v3dChromeShineBtn" title="Toggle metallic chrome reflection on all parts">
                     <svg class="glyph glyph-xs text-cyan"><use href="#glyph-sparkle"></use></svg>
                   </button>

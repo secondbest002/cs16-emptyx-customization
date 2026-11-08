@@ -5,6 +5,7 @@
 
 import { state, eventBus } from "../core/state.js";
 import { apiPost, showToast, showLoader, hideLoader } from "../core/api.js";
+import { getScrapedStickerCanvas, getScrapeConditionName } from "./sticker_scraper_client.js";
 
 const els = {
   get bakeTargetSkin() { return document.getElementById("bakeTargetSkin"); },
@@ -115,6 +116,57 @@ export function initBakeModule() {
       renderBakeCanvas();
     }
   });
+
+  // Listen to 3D Decal Stamping from viewer3d.js
+  eventBus.on("bake:stamp3D", ({ x, y, textureIndex, scale, rotation, scrape }) => {
+    handle3DStampPlacement({ x, y, textureIndex, scale, rotation, scrape });
+  });
+
+  // Listen to Scrape updates from 3D HUD or Coin Scrape
+  eventBus.on("bake:setScrape", ({ scrape, delta }) => {
+    const active = getActiveLayer();
+    if (!active) return;
+    if (delta !== undefined) {
+      let nextVal = (active.scrape || 0) + delta;
+      if (nextVal > 100) nextVal = 0;
+      active.scrape = nextVal;
+    } else if (scrape !== undefined) {
+      active.scrape = Math.max(0, Math.min(100, parseInt(scrape, 10) || 0));
+    }
+    updateActiveLayerUI();
+    renderBakeCanvas();
+    eventBus.emit("bake:scrapeSync", { scrape: active.scrape, name: active.name });
+  });
+}
+
+export function handle3DStampPlacement({ x, y, textureIndex, scale, rotation, scrape }) {
+  const bw = (els.bakeCanvas && els.bakeCanvas.width) || 512;
+  const bh = (els.bakeCanvas && els.bakeCanvas.height) || 512;
+
+  if (textureIndex !== undefined && textureIndex !== null && els.bakeTargetSkin) {
+    if (String(els.bakeTargetSkin.value) !== String(textureIndex)) {
+      els.bakeTargetSkin.value = String(textureIndex);
+      loadActiveSkinToCanvas();
+    }
+  }
+
+  const clampedX = Math.max(0, Math.min(bw, Math.round(x)));
+  const clampedY = Math.max(0, Math.min(bh, Math.round(y)));
+
+  const active = getActiveLayer();
+  if (active) {
+    active.x = clampedX;
+    active.y = clampedY;
+    if (scale !== undefined && scale !== null) active.scale = scale;
+    if (rotation !== undefined && rotation !== null) active.rotation = rotation;
+    if (scrape !== undefined && scrape !== null) active.scrape = scrape;
+
+    updateActiveLayerUI();
+    renderBakeCanvas();
+    showToast(`Stamped "${active.name}" at (${clampedX}, ${clampedY}) in 3D!`, "success");
+  } else {
+    showToast("Please choose or add a sticker from the Library first to stamp!", "info");
+  }
 }
 
 export function setupBakeTab() {
@@ -428,19 +480,15 @@ export function updateActiveLayerUI() {
 
   if (els.bakeScrape) els.bakeScrape.value = active.scrape;
   if (els.bakeScrapeVal) {
-    const val = active.scrape;
-    let label = "Mint (0%)";
-    if (val > 75) label = `Battle-Scarred (${val}%)`;
-    else if (val > 45) label = `Well-Worn (${val}%)`;
-    else if (val > 20) label = `Field-Tested (${val}%)`;
-    else if (val > 0) label = `Light Wear (${val}%)`;
-    els.bakeScrapeVal.textContent = label;
+    els.bakeScrapeVal.textContent = getScrapeConditionName(active.scrape);
   }
 
   if (els.bakeOpacity) els.bakeOpacity.value = Math.round((active.opacity ?? 1.0) * 100);
   if (els.bakeOpacityVal) els.bakeOpacityVal.textContent = `${Math.round((active.opacity ?? 1.0) * 100)}%`;
 
   if (els.bakeChromeEffect) els.bakeChromeEffect.value = active.chrome_effect || "matte";
+
+  eventBus.emit("bake:activeLayerChanged", { layer: active });
 
   // Telemetry HUD
   if (els.telemCoords) els.telemCoords.textContent = `X: ${rx}, Y: ${ry}`;
@@ -481,7 +529,11 @@ export function renderBakeCanvas() {
   sortedLayers.forEach((layer) => {
     if (!layer.visible || !layer.img) return;
 
-    const sImg = layer.img;
+    const scrapeVal = layer.scrape || 0;
+    const sImg = scrapeVal > 0
+      ? getScrapedStickerCanvas(layer.img, scrapeVal, 1337, layer.id || layer.name)
+      : layer.img;
+
     const baseDim = Math.round(bw * 0.25 * layer.scale);
     const aspect = sImg.width / Math.max(1, sImg.height);
     const sw = aspect >= 1.0 ? baseDim : Math.round(baseDim * aspect);

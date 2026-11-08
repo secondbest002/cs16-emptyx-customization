@@ -11,6 +11,7 @@ import webbrowser
 from .config_manager import StudioConfig
 from .baker import bake_sticker_onto_texture
 from .color_adjuster import PRESETS, adjust_and_quantize
+from .sleeve_injector import SLEEVE_PRESETS, transplant_3d_sleeves
 from .glove_transfer import batch_transfer_gloves
 from .image_pipeline import process_image_for_texture
 from .pw_restore import find_model_backup, migrate_loose_backups
@@ -592,6 +593,47 @@ def cmd_pov(args):
             sys.exit(1)
 
 
+def cmd_transplant_sleeves(args):
+    """Handler for 'transplant-sleeves' command."""
+    if not args.weapon and not args.target:
+        print("Error: Either -w/--weapon or -t/--target must be specified.", file=sys.stderr)
+        sys.exit(1)
+
+    target_path = Path(args.target).resolve() if args.target else resolve_model_path(args.weapon, team=args.team)
+    donor_path = Path(args.donor).resolve() if args.donor else None
+
+    print(f"\n[Asset Studio Pro] 3D Sleeve Transplant Engine")
+    print(f"Target Model   : {target_path}")
+    print(f"Preset / Donor : {args.preset if not donor_path else donor_path}")
+    if args.scale is not None:
+        print(f"Scale Override : {args.scale:.4f}x")
+    if args.cuff_offset != 0.0:
+        print(f"Cuff Offset    : {args.cuff_offset:.2f} units")
+
+    result = transplant_3d_sleeves(
+        target_model_path=target_path,
+        donor_path=donor_path,
+        donor_preset=args.preset,
+        scale_ratio=args.scale,
+        cuff_offset=args.cuff_offset,
+        output_path=Path(args.output).resolve() if args.output else None,
+        create_backup=not args.no_backup,
+    )
+
+    if result.get("success"):
+        print(f"\n[SUCCESS] {result.get('message')}")
+        if result.get("detected_laterality"):
+            print(f"Rig Laterality       : {result['detected_laterality']}")
+        if result.get("auto_swapped_lr"):
+            print("Laterality Remap     : Left <-> Right bones auto-swapped for inverted rig.")
+        if result.get("scale_ratio"):
+            print(f"Applied Scale Ratio  : {result['scale_ratio']:.4f}x ({result.get('scale_description', '')})")
+        print()
+    else:
+        print(f"\n[ERROR] Sleeve transplant failed: {result.get('error')}", file=sys.stderr)
+        sys.exit(1)
+
+
 def cmd_ui(args):
     from .web.server import run_studio_server
 
@@ -761,6 +803,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_pov.add_argument("-o", "--output", default=None, help="Output custom CFG path (default: in-place cstrike/modern_pov.cfg)")
     p_pov.add_argument("--cstrike", default=None, help="Path to cstrike directory or game root (default: auto-detected)")
 
+    # transplant-sleeves
+    p_sleeve = subparsers.add_parser("transplant-sleeves", help="Transplant 3D sleeves/arms from donor model or preset")
+    p_sleeve.add_argument("-w", "--weapon", default=None, help="Weapon name (e.g. knife, ak47, usp) or use -t/--target")
+    p_sleeve.add_argument("-t", "--target", default=None, help="Direct path to target .mdl file")
+    p_sleeve.add_argument("--team", choices=["ct", "t"], default="ct", help="Team loadout (default: ct)")
+    p_sleeve.add_argument("-d", "--donor", default=None, help="Direct path to donor .mdl file")
+    p_sleeve.add_argument("--preset", choices=list(SLEEVE_PRESETS.keys()), default="sas_navy", help="Sleeve preset (default: sas_navy)")
+    p_sleeve.add_argument("--scale", type=float, default=None, help="Scale multiplier override (default: auto bone ratio)")
+    p_sleeve.add_argument("--cuff-offset", type=float, default=0.0, help="Wrist cuff longitudinal offset along forearm bone (default: 0.0)")
+    p_sleeve.add_argument("-o", "--output", default=None, help="Output MDL path (default: in-place)")
+    p_sleeve.add_argument("--no-backup", action="store_true", help="Do not create a backup file")
+
     return parser
 
 
@@ -796,6 +850,7 @@ def main():
         "restore": cmd_restore,
         "clean-backups": cmd_clean_backups,
         "pov": cmd_pov,
+        "transplant-sleeves": cmd_transplant_sleeves,
     }
 
     handler = dispatch.get(args.command)
