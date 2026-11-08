@@ -74,6 +74,7 @@ from ..wear_simulator import (
     simulate_and_quantize,
 )
 from ..pw_restore import (
+    find_model_backup,
     get_model_thumbnail,
     list_model_backups,
     restore_specific_backup,
