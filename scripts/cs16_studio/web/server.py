@@ -2302,6 +2302,8 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                 if custom_donor_path:
                     donor_p = Path(custom_donor_path).resolve()
 
+                force_save = _safe_bool(req_data.get("force"), False)
+
                 result = transplant_3d_sleeves(
                     target_model_path=tgt_path,
                     donor_path=donor_p,
@@ -2310,6 +2312,7 @@ class StudioApiHandler(SimpleHTTPRequestHandler):
                     cuff_offset=cuff_offset,
                     create_backup=auto_backup,
                     workspace_root=self.workspace_root,
+                    force_save=force_save,
                 )
 
                 if result.get("success"):

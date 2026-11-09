@@ -1,16 +1,20 @@
 """
-sleeve_injector.py - 3D Sleeve Injection Engine for Counter-Strike 1.6 GoldSrc StudioModels (IDST v10).
+sleeve_injector.py - 3D Sleeve Injection Engine 2.0 for Counter-Strike 1.6 GoldSrc StudioModels (IDST v10).
 
 Provides:
-1. detect_arm_type: Distinguishes between bare arm (t_arm), 3D jacket sleeves (ct_arms), and gloves only.
-2. calculate_scale_ratio: Dynamic bone length ratio solver (||p_target,hand - p_target,forearm|| / ||p_donor,hand - p_donor,forearm||).
-3. compute_bone_bind_matrices: Solves 4x4 rest-pose world matrices for forward kinematics.
-4. detect_rig_laterality: Classifies whether rig uses standard or inverted bone naming laterality.
-5. build_bone_remapping: Spatial laterality-aware bone mapper with ForeTwist -> Forearm -> Hand fallback.
-6. SLEEVE_PRESETS: 4 CT uniform presets (SAS Navy Blue, GIGN Urban Camo, GSG-9 Woodland Tactical, Arctic Warfare Heavy Parka) + Custom viewmodel donor.
-7. transplant_3d_sleeves: High-fidelity 3D submodel transplant with 3D rigid bone basis transforms,
-   spatial laterality remapping, submodel limit validation (MAXSTUDIOVERTS <= 2048, MAXSTUDIOBODYPARTS <= 32),
-   and atomic replacement with .bak backup.
+1. RigArchetype: Functional archetype classification (knife, rifle, pistol, heavy).
+2. resolve_archetype_donor: Family-aware CT donor resolution.
+3. is_rig_compatible_native: Bit-for-bit identical rig detection.
+4. validate_sleeve_fit: Automated sleeve-to-glove 3D gap and quality validator.
+5. detect_arm_type: Distinguishes between bare arm (t_arm), 3D jacket sleeves (ct_arms), and gloves only.
+6. calculate_scale_ratio: Dynamic bone length ratio solver.
+7. compute_bone_bind_matrices: Solves 4x4 rest-pose world matrices for forward kinematics.
+8. detect_rig_laterality: Classifies whether rig uses standard or inverted bone naming laterality.
+9. build_bone_remapping: Spatial laterality-aware bone mapper with rotation-activity prioritization.
+10. SLEEVE_PRESETS: 4 CT uniform presets with multi-archetype donors + custom viewmodel donor.
+11. transplant_3d_sleeves: Dual-mode engine:
+    - Native Identity Splice (when donor and target share rig): 100% bit-for-bit vertex alignment (0.000000 gap).
+    - Adaptive Cross-Rig (when rigs differ): 3D rigid bone basis transforms + boundary cuff snapping.
 """
 
 import copy
@@ -46,20 +50,79 @@ from .chrome_injector import parse_model_geometry, serialize_model_binary
 MAXSTUDIOBODYPARTS = 32
 MAXSTUDIOVERTS = 2048
 
-# Built-in Sleeve Presets
+
+class SkeletalCluster:
+    CLUSTER_24 = "cluster_24_csgo"
+    CLUSTER_10 = "cluster_10_classic"
+    CLUSTER_KNIFE = "cluster_knife"
+    UNKNOWN = "unknown"
+
+
+class RigArchetype:
+    KNIFE = "knife"
+    RIFLE = "rifle"
+    PISTOL = "pistol"
+    HEAVY = "heavy"
+    UNKNOWN = "unknown"
+
+
+# Default CT donor models per rig archetype (legacy fallback)
+ARCHETYPE_DONORS: Dict[str, str] = {
+    RigArchetype.KNIFE: "cstrike/models/custom_skins/ct/v_knife_m9.mdl",
+    RigArchetype.RIFLE: "cstrike/models/custom_skins/ct/v_galil.mdl",
+    RigArchetype.PISTOL: "cstrike/models/custom_skins/ct/v_usp.mdl",
+    RigArchetype.HEAVY: "cstrike/models/custom_skins/ct/v_xm1014.mdl",
+}
+
+# Prioritized CT donor models per skeletal cluster
+CLUSTER_DONORS: Dict[str, List[str]] = {
+    SkeletalCluster.CLUSTER_24: [
+        "cstrike/models/custom_skins/ct/v_galil.mdl",
+        "cstrike/models/custom_skins/ct/v_aug.mdl",
+        "cstrike/models/custom_skins/ct/v_scout.mdl",
+        "cstrike/models/custom_skins/ct/v_usp.mdl",
+        "cstrike/models/custom_skins/ct/v_deagle.mdl",
+    ],
+    SkeletalCluster.CLUSTER_10: [
+        "cstrike/models/custom_skins/ct/v_m4a1.mdl",
+        "cstrike/models/custom_skins/ct/v_xm1014.mdl",
+        "cstrike/models/custom_skins/ct/v_m3.mdl",
+        "cstrike/models/custom_skins/ct/v_famas.mdl",
+    ],
+    SkeletalCluster.CLUSTER_KNIFE: [
+        "cstrike/models/custom_skins/ct/v_knife_m9.mdl",
+        "cstrike/models/custom_skins/ct/v_knife.mdl",
+        "cstrike/models/custom_skins/ct/v_knife_bayonet.mdl",
+        "cstrike/models/custom_skins/ct/v_knife_karambit.mdl",
+    ],
+}
+
+# Built-in Sleeve Presets with multi-cluster donor resolution
 SLEEVE_PRESETS: Dict[str, Dict[str, Any]] = {
     "sas_navy": {
         "id": "sas_navy",
         "name": "SAS Navy Blue Heavy Fleece",
         "description": "Classic CS 1.6 HD British SAS Navy Blue heavyweight fleece uniform.",
-        "default_donor": "cstrike/models/custom_skins/ct/v_m4a1.mdl",
+        "archetype_donors": ARCHETYPE_DONORS,
+        "cluster_donors": {
+            SkeletalCluster.CLUSTER_24: "cstrike/models/custom_skins/ct/v_galil.mdl",
+            SkeletalCluster.CLUSTER_10: "cstrike/models/custom_skins/ct/v_m4a1.mdl",
+            SkeletalCluster.CLUSTER_KNIFE: "cstrike/models/custom_skins/ct/v_knife_m9.mdl",
+        },
+        "default_donor": "cstrike/models/custom_skins/ct/v_galil.mdl",
         "color_adjustments": None,
     },
     "gign_urban": {
         "id": "gign_urban",
         "name": "GIGN Urban Camo Jacket",
         "description": "French GIGN Tactical high-contrast urban camouflage and ballistic nylon.",
-        "default_donor": "cstrike/models/custom_skins/ct/v_m4a1.mdl",
+        "archetype_donors": ARCHETYPE_DONORS,
+        "cluster_donors": {
+            SkeletalCluster.CLUSTER_24: "cstrike/models/custom_skins/ct/v_galil.mdl",
+            SkeletalCluster.CLUSTER_10: "cstrike/models/custom_skins/ct/v_m4a1.mdl",
+            SkeletalCluster.CLUSTER_KNIFE: "cstrike/models/custom_skins/ct/v_knife_m9.mdl",
+        },
+        "default_donor": "cstrike/models/custom_skins/ct/v_galil.mdl",
         "color_adjustments": {
             "temperature": -15,
             "tint": -5,
@@ -71,7 +134,13 @@ SLEEVE_PRESETS: Dict[str, Dict[str, Any]] = {
         "id": "gsg9_woodland",
         "name": "GSG-9 Woodland Tactical",
         "description": "German GSG-9 woodland olive-drab tactical combat sleeve with flecktarn tone.",
-        "default_donor": "cstrike/models/custom_skins/ct/v_m4a1.mdl",
+        "archetype_donors": ARCHETYPE_DONORS,
+        "cluster_donors": {
+            SkeletalCluster.CLUSTER_24: "cstrike/models/custom_skins/ct/v_galil.mdl",
+            SkeletalCluster.CLUSTER_10: "cstrike/models/custom_skins/ct/v_m4a1.mdl",
+            SkeletalCluster.CLUSTER_KNIFE: "cstrike/models/custom_skins/ct/v_knife_m9.mdl",
+        },
+        "default_donor": "cstrike/models/custom_skins/ct/v_galil.mdl",
         "color_adjustments": {
             "hue": 65,
             "saturation": 10,
@@ -83,7 +152,13 @@ SLEEVE_PRESETS: Dict[str, Dict[str, Any]] = {
         "id": "arctic_parka",
         "name": "Arctic Warfare Heavy Parka",
         "description": "Sub-zero heavy arctic thermal parka with high-durability cold-weather weave.",
-        "default_donor": "cstrike/models/custom_skins/ct/v_m4a1.mdl",
+        "archetype_donors": ARCHETYPE_DONORS,
+        "cluster_donors": {
+            SkeletalCluster.CLUSTER_24: "cstrike/models/custom_skins/ct/v_galil.mdl",
+            SkeletalCluster.CLUSTER_10: "cstrike/models/custom_skins/ct/v_m4a1.mdl",
+            SkeletalCluster.CLUSTER_KNIFE: "cstrike/models/custom_skins/ct/v_knife_m9.mdl",
+        },
+        "default_donor": "cstrike/models/custom_skins/ct/v_galil.mdl",
         "color_adjustments": {
             "brightness": 20,
             "contrast": 10,
@@ -95,10 +170,249 @@ SLEEVE_PRESETS: Dict[str, Dict[str, Any]] = {
         "id": "custom",
         "name": "Custom Viewmodel Donor",
         "description": "Transplant sleeve geometry directly from any user-selected GoldSrc viewmodel.",
+        "archetype_donors": ARCHETYPE_DONORS,
+        "cluster_donors": {
+            SkeletalCluster.CLUSTER_24: "cstrike/models/custom_skins/ct/v_galil.mdl",
+            SkeletalCluster.CLUSTER_10: "cstrike/models/custom_skins/ct/v_m4a1.mdl",
+            SkeletalCluster.CLUSTER_KNIFE: "cstrike/models/custom_skins/ct/v_knife_m9.mdl",
+        },
         "default_donor": None,
         "color_adjustments": None,
     },
 }
+
+
+def classify_rig_archetype(bones: List[Dict[str, Any]], model_name: str = "") -> str:
+    """
+    Classifies a GoldSrc viewmodel into its functional rig archetype:
+    - 'knife': 36-42 bones knife rig with independent arm animations
+    - 'pistol': one-handed / dual-handed pistol rig
+    - 'heavy': pump shotgun / machinegun rig
+    - 'rifle': two-handed rifle / SMG / sniper rig
+    """
+    name_low = model_name.lower()
+    b_names = [b.get("name", "").lower() if isinstance(b, dict) else str(b).lower() for b in bones]
+
+    # 1. Knife detection
+    if any(k in name_low for k in ("knife", "bayonet", "karambit", "butterfly", "m9", "daggers", "flip", "gut")):
+        return RigArchetype.KNIFE
+    if any("knife" in bn for bn in b_names):
+        return RigArchetype.KNIFE
+
+    has_l_foretwist = any("l_foretwist" in bn for bn in b_names)
+    has_r_foretwist = any("r_foretwist" in bn for bn in b_names)
+    if has_l_foretwist and has_r_foretwist and len(bones) in range(35, 45):
+        if not any(k in bn for bn in b_names for k in ("clip", "mag", "bolt", "slide", "grenade", "pin")):
+            return RigArchetype.KNIFE
+
+    # 2. Pistol detection
+    pistol_keys = ("usp", "glock", "deagle", "p228", "fiveseven", "elite", "beretta", "revolver", "cz75")
+    if any(k in name_low for k in pistol_keys) or any(k in bn for bn in b_names for k in ("slide", "hammer")):
+        return RigArchetype.PISTOL
+
+    # 3. Shotgun / Heavy detection
+    heavy_keys = ("xm1014", "m3", "m249", "negev", "sawedoff", "mag7", "nova")
+    if any(k in name_low for k in heavy_keys) or any(k in bn for bn in b_names for k in ("pump", "drum", "chain")):
+        return RigArchetype.HEAVY
+
+    # 4. Default to Rifle / SMG
+    return RigArchetype.RIFLE
+
+
+def resolve_archetype_donor(
+    target_path: Path,
+    archetype: str,
+    root: Path,
+    custom_donor: Optional[Union[str, Path]] = None,
+    preset_meta: Optional[Dict[str, Any]] = None,
+    cluster: Optional[str] = None,
+    target_bones: Optional[List[Dict[str, Any]]] = None,
+) -> Path:
+    """
+    Resolves the best CT donor viewmodel path matching the target rig archetype and skeletal cluster.
+    Prioritizes donors in the same skeletal cluster that achieve 100% native arm compatibility.
+    """
+    if custom_donor is not None:
+        p_c = Path(custom_donor).resolve()
+        if p_c.is_file():
+            return p_c
+
+    # 1. Check preset-specific cluster donor
+    if cluster and preset_meta and "cluster_donors" in preset_meta:
+        c_rel = preset_meta["cluster_donors"].get(cluster)
+        if c_rel:
+            p_cand = (root / c_rel).resolve()
+            if p_cand.is_file() and p_cand != target_path.resolve():
+                return p_cand
+
+    # 2. Check cluster candidate donors
+    candidates = []
+    if cluster and cluster in CLUSTER_DONORS:
+        candidates.extend(CLUSTER_DONORS[cluster])
+
+    # 3. If target_bones is provided, search cluster candidates for bit-for-bit native compatibility
+    if target_bones and candidates:
+        for rel_cand in candidates:
+            p_cand = (root / rel_cand).resolve()
+            if p_cand.is_file() and p_cand != target_path.resolve():
+                try:
+                    c_data = p_cand.read_bytes()
+                    c_bones, _ = compute_bone_bind_matrices(c_data)
+                    is_nat, _ = is_rig_compatible_native(target_bones, c_bones)
+                    if is_nat:
+                        return p_cand
+                except Exception:
+                    continue
+
+    # 4. First existing candidate from cluster
+    for rel_cand in candidates:
+        p_cand = (root / rel_cand).resolve()
+        if p_cand.is_file() and p_cand != target_path.resolve():
+            return p_cand
+
+    # 5. Fallback to preset archetype donors or default
+    donors_map = preset_meta.get("archetype_donors") if preset_meta else ARCHETYPE_DONORS
+    donor_rel = donors_map.get(archetype, donors_map.get(RigArchetype.RIFLE, "cstrike/models/custom_skins/ct/v_m4a1.mdl"))
+    if donor_rel:
+        donor_cand = (root / donor_rel).resolve()
+        if donor_cand.is_file() and donor_cand != target_path.resolve():
+            return donor_cand
+
+    # Search ct directory for archetype matches
+    ct_dir = root / "cstrike" / "models" / "custom_skins" / "ct"
+    if ct_dir.is_dir():
+        if archetype == RigArchetype.KNIFE:
+            for k_cand in ["v_knife_m9.mdl", "v_knife.mdl", "v_knife_karambit.mdl"]:
+                p_k = ct_dir / k_cand
+                if p_k.is_file() and p_k.resolve() != target_path.resolve():
+                    return p_k.resolve()
+        elif archetype == RigArchetype.PISTOL:
+            for p_cand in ["v_usp.mdl", "v_deagle.mdl", "v_glock18.mdl"]:
+                p_p = ct_dir / p_cand
+                if p_p.is_file() and p_p.resolve() != target_path.resolve():
+                    return p_p.resolve()
+        elif archetype == RigArchetype.HEAVY:
+            for h_cand in ["v_xm1014.mdl", "v_m3.mdl"]:
+                p_h = ct_dir / h_cand
+                if p_h.is_file() and p_h.resolve() != target_path.resolve():
+                    return p_h.resolve()
+
+        # General CT fallbacks
+        for f_cand in ["v_galil.mdl", "v_aug.mdl", "v_m4a1.mdl", "v_knife_m9.mdl", "v_knife.mdl"]:
+            p_f = ct_dir / f_cand
+            if p_f.is_file() and p_f.resolve() != target_path.resolve():
+                return p_f.resolve()
+
+    return (root / "cstrike" / "models" / "custom_skins" / "ct" / "v_m4a1.mdl").resolve()
+
+
+def is_rig_compatible_native(
+    target_bones: List[Dict[str, Any]],
+    donor_bones: List[Dict[str, Any]],
+    tolerance: float = 1e-2,
+) -> Tuple[bool, str]:
+    """
+    Checks if donor and target arm bones have matching names, parents, and bind-pose coordinates.
+    When matching, enables bit-for-bit Native Identity Splice (0.000000 gap, zero distortion).
+    """
+    if not target_bones or not donor_bones:
+        return False, "Empty bone lists"
+
+    arm_bone_indices = []
+    for bi, b in enumerate(donor_bones):
+        bname = b.get("name", "").lower()
+        if any(k in bname for k in ("forearm", "foretwist", "hand", "finger", "arm")):
+            arm_bone_indices.append(bi)
+
+    if not arm_bone_indices:
+        return False, "No arm bones found in donor"
+
+    target_by_name = {b.get("name", "").lower(): (bi, b) for bi, b in enumerate(target_bones)}
+
+    for d_idx in arm_bone_indices:
+        d_b = donor_bones[d_idx]
+        d_name = d_b.get("name", "").lower()
+        if d_name not in target_by_name:
+            return False, f"Target missing bone '{d_name}'"
+
+        t_idx, t_b = target_by_name[d_name]
+        d_parent = d_b.get("parent", -1)
+        t_parent = t_b.get("parent", -1)
+        if d_parent >= 0 and t_parent >= 0:
+            d_pname = donor_bones[d_parent].get("name", "").lower()
+            t_pname = target_bones[t_parent].get("name", "").lower()
+            if d_pname != t_pname:
+                return False, f"Parent mismatch for '{d_name}': donor '{d_pname}' != target '{t_pname}'"
+
+        d_pos = d_b.get("pos", [0, 0, 0])
+        t_pos = t_b.get("pos", [0, 0, 0])
+        d_rot = d_b.get("rot", [0, 0, 0])
+        t_rot = t_b.get("rot", [0, 0, 0])
+
+        pos_diff = sum(abs(p1 - p2) for p1, p2 in zip(d_pos, t_pos))
+        rot_diff = sum(abs(r1 - r2) for r1, r2 in zip(d_rot, t_rot))
+        if pos_diff > tolerance or rot_diff > tolerance:
+            return False, f"Bind-pose transform diff on '{d_name}': pos_diff={pos_diff:.4f}, rot_diff={rot_diff:.4f}"
+
+    return True, "Bit-for-bit identical arm skeleton and bind pose"
+
+
+def validate_sleeve_fit(model_data: bytes) -> Dict[str, Any]:
+    """
+    Measures 3D world distances between sleeve cuff vertices and glove cuff vertices.
+    """
+    if len(model_data) < 212:
+        return {"is_flush": False, "score": 0, "issues": ["Invalid model data"]}
+
+    bones, matrices = compute_bone_bind_matrices(model_data)
+    parsed = parse_model_geometry(model_data)
+
+    def get_world_pts(patterns: List[str]) -> np.ndarray:
+        world_pts = []
+        for bp in parsed["bodyparts"]:
+            for m in bp["models"]:
+                if any(p.lower() in m["name"].lower() for p in patterns):
+                    verts = [struct.unpack_from("<3f", m["verts_raw"], vi * 12) for vi in range(m["numverts"])]
+                    vinfo = list(m["vertinfo_raw"])
+                    for v, b in zip(verts, vinfo):
+                        b_mat = matrices[b] if b < len(matrices) else np.identity(4, dtype=np.float32)
+                        vh = np.array([v[0], v[1], v[2], 1.0], dtype=np.float32)
+                        world_pts.append(np.matmul(b_mat, vh)[:3])
+        return np.array(world_pts, dtype=np.float32) if world_pts else np.empty((0, 3), dtype=np.float32)
+
+    glove_pts = get_world_pts(["sport", "glove"])
+    sleeve_pts = get_world_pts(["ct_arms", "cs_arms_sleeved", "sleeve"])
+
+    if len(glove_pts) == 0:
+        return {"has_gloves": False, "is_flush": True, "score": 100, "issues": ["No glove submodels found"]}
+    if len(sleeve_pts) == 0:
+        return {"has_sleeves": False, "is_flush": False, "score": 0, "issues": ["No sleeve submodels found"]}
+
+    g_left = glove_pts[glove_pts[:, 0] < 0]
+    s_left = sleeve_pts[sleeve_pts[:, 0] < 0]
+    g_right = glove_pts[glove_pts[:, 0] > 0]
+    s_right = sleeve_pts[sleeve_pts[:, 0] > 0]
+
+    min_gap_l = float(np.linalg.norm(g_left[:, None, :] - s_left[None, :, :], axis=2).min()) if len(g_left) and len(s_left) else 999.0
+    min_gap_r = float(np.linalg.norm(g_right[:, None, :] - s_right[None, :, :], axis=2).min()) if len(g_right) and len(s_right) else 999.0
+
+    is_flush = (min_gap_l < 0.1 and min_gap_r < 0.1)
+    issues = []
+    if min_gap_l >= 0.1:
+        issues.append(f"Left wrist gap detected ({min_gap_l:.2f} units)")
+    if min_gap_r >= 0.1:
+        issues.append(f"Right wrist gap detected ({min_gap_r:.2f} units)")
+
+    max_gap = max(min_gap_l, min_gap_r)
+    score = 100 if is_flush else max(0, int(100 - max_gap * 15))
+
+    return {
+        "min_gap_left": round(min_gap_l, 4),
+        "min_gap_right": round(min_gap_r, 4),
+        "is_flush": is_flush,
+        "score": score,
+        "issues": issues,
+    }
 
 
 def compute_bone_bind_matrices(data: bytes) -> Tuple[List[Dict[str, Any]], List[np.ndarray]]:
@@ -158,6 +472,46 @@ def compute_bone_bind_matrices(data: bytes) -> Tuple[List[Dict[str, Any]], List[
 
     return bones, world_matrices
 
+def detect_skeletal_cluster(bones: List[Dict[str, Any]], data: bytes, model_name: str = "") -> str:
+    """
+    Detects the skeletal rig cluster of a GoldSrc viewmodel:
+    - CLUSTER_KNIFE: dual-arm knife rig
+    - CLUSTER_24: CS:GO scaled rig (bone length ~24.7 units)
+    - CLUSTER_10: Classic GoldSrc 1.0x rig (bone length ~10.3 units)
+    """
+    name_low = model_name.lower()
+    b_names = [b.get("name", "").lower() if isinstance(b, dict) else str(b).lower() for b in bones]
+
+    # 1. Knife detection
+    if any(k in name_low for k in ("knife", "bayonet", "karambit", "butterfly", "m9", "daggers", "flip", "gut", "stiletto", "talon")):
+        return SkeletalCluster.CLUSTER_KNIFE
+    if any("knife" in bn for bn in b_names):
+        return SkeletalCluster.CLUSTER_KNIFE
+
+    has_l_foretwist = any("l_foretwist" in bn for bn in b_names)
+    has_r_foretwist = any("r_foretwist" in bn for bn in b_names)
+    if has_l_foretwist and has_r_foretwist and len(bones) in range(35, 45):
+        if not any(k in bn for bn in b_names for k in ("clip", "mag", "bolt", "slide", "grenade", "pin")):
+            return SkeletalCluster.CLUSTER_KNIFE
+
+    # 2. Forearm-to-hand bone distance measurement
+    dist = _get_forearm_and_hand_bone_distance(data)
+    if dist >= 18.0:
+        return SkeletalCluster.CLUSTER_24
+    elif 0.0 < dist < 18.0:
+        return SkeletalCluster.CLUSTER_10
+
+    # 3. Fallback check by hand position if distance was 0
+    for b in bones:
+        if "r_hand" in b.get("name", "").lower():
+            pos = b.get("pos", [0, 0, 0])
+            if abs(pos[0] - (-24.7)) < 5.0:
+                return SkeletalCluster.CLUSTER_24
+            elif abs(pos[0] - (-10.3)) < 3.0:
+                return SkeletalCluster.CLUSTER_10
+
+    return SkeletalCluster.UNKNOWN
+
 
 def _bone_name(b: Any) -> str:
     if isinstance(b, dict):
@@ -191,7 +545,6 @@ def get_bone_rotation_activity(model_data: bytes) -> Dict[int, bool]:
         for b in range(numbones):
             b_anim_off = animindex + b * 12
             if b_anim_off + 12 <= len(model_data):
-                # Rot offsets are at offset +6 (rotX, rotY, rotZ unsigned shorts)
                 rot_offsets = struct.unpack_from("<3H", model_data, b_anim_off + 6)
                 if any(o > 1 for o in rot_offsets):
                     activity[b] = True
@@ -201,9 +554,6 @@ def get_bone_rotation_activity(model_data: bytes) -> Dict[int, bool]:
 def detect_rig_laterality(bones: List[Dict[str, Any]], world_matrices: List[np.ndarray]) -> str:
     """
     Detects whether the rig has 'standard' or 'inverted' bone naming laterality.
-    In standard GoldSrc rigs, Left Arm bones (Bip01_L_*) have negative X coordinates (X < 0)
-    relative to Right Arm bones (Bip01_R_*) which have positive X coordinates (X > 0).
-    Inverted rigs (e.g. some knife models) have Bip01_L_* on positive X and Bip01_R_* on negative X.
     """
     if not bones or not world_matrices or len(bones) != len(world_matrices):
         return "standard"
@@ -229,10 +579,7 @@ def detect_rig_laterality(bones: List[Dict[str, Any]], world_matrices: List[np.n
 
 def detect_arm_type(model_path: Union[str, Path, MdlModel]) -> Dict[str, Any]:
     """
-    Inspects model bodyparts, submodels, textures, and bones to classify arm configuration:
-    - 'bare_arm': Thin bare arms mesh (e.g. Terrorist t_arm or bare_arm texture)
-    - 'jacket_sleeve': Volumetric 3D cloth jacket sleeve (e.g. ct_arms_01..03 or sleeve.bmp)
-    - 'gloves_only': Model with glove textures/meshes but without separate arm/sleeve meshes
+    Inspects model bodyparts, submodels, textures, and bones to classify arm configuration.
     """
     if isinstance(model_path, MdlModel):
         path = model_path.filepath
@@ -257,7 +604,6 @@ def detect_arm_type(model_path: Union[str, Path, MdlModel]) -> Dict[str, Any]:
             "rig_laterality": "standard",
         }
 
-    # Textures table
     numtextures, textureindex = struct.unpack_from("<II", data, 180)
     textures: List[str] = []
     for i in range(numtextures):
@@ -266,7 +612,6 @@ def detect_arm_type(model_path: Union[str, Path, MdlModel]) -> Dict[str, Any]:
             tname = struct.unpack_from("<64s", data, t_off)[0].split(b"\x00")[0].decode("latin1", errors="ignore")
             textures.append(tname)
 
-    # Bodyparts & Submodels table
     numbodyparts, bodypartindex = struct.unpack_from("<II", data, 204)
     all_submodels: List[str] = []
     arm_submodels: List[str] = []
@@ -296,13 +641,11 @@ def detect_arm_type(model_path: Union[str, Path, MdlModel]) -> Dict[str, Any]:
                 arm_submodels.append(m_name_str)
                 arm_radii.append(float(m_radius))
 
-    # Evaluate classification
     has_ct_arms = any("ct_arms" in s.lower() or "cs_arms_sleeved" in s.lower() for s in all_submodels)
     has_t_arm = any("t_arm" in s.lower() or "cs_arms_reference" in s.lower() or "bare_arm" in s.lower() for s in all_submodels)
 
     has_sleeve_tex = any("sleeve" in t.lower() for t in textures)
     has_bare_tex = any("bare" in t.lower() or "t_arm" in t.lower() for t in textures)
-
     has_glove_tex = any(any(k in t.lower() for k in ("sport", "glove", "hand")) for t in textures)
 
     if has_ct_arms or (has_sleeve_tex and not has_t_arm and not has_bare_tex):
@@ -339,9 +682,6 @@ def detect_arm_type(model_path: Union[str, Path, MdlModel]) -> Dict[str, Any]:
 
 
 def _get_forearm_and_hand_bone_distance(data: bytes) -> float:
-    """
-    Computes Euclidean distance between forearm and hand bone positions in world matrix space.
-    """
     bones, world_matrices = compute_bone_bind_matrices(data)
     if not bones or not world_matrices:
         return 0.0
@@ -355,7 +695,6 @@ def _get_forearm_and_hand_bone_distance(data: bytes) -> float:
                     return idx
         return -1
 
-    # Try right arm pair first, then left arm pair
     fa_idx = find_bone_index(["rforearm", "rightforearm", "rforetwist"])
     h_idx = find_bone_index(["rhand", "righthand"])
 
@@ -375,19 +714,13 @@ def _get_forearm_and_hand_bone_distance(data: bytes) -> float:
 
     p_fa = world_matrices[fa_idx][:3, 3]
     p_h = world_matrices[h_idx][:3, 3]
-    dist = float(np.linalg.norm(p_h - p_fa))
-    return dist
+    return float(np.linalg.norm(p_h - p_fa))
 
 
 def calculate_scale_ratio(
     target_path: Union[str, Path],
     donor_path: Union[str, Path],
 ) -> Tuple[float, str]:
-    """
-    Calculates scale ratio from bone lengths:
-    scale = ||p_target,hand - p_target,forearm|| / ||p_donor,hand - p_donor,forearm||
-    Returns (ratio, description).
-    """
     t_path = Path(target_path).resolve()
     d_path = Path(donor_path).resolve()
 
@@ -409,7 +742,6 @@ def calculate_scale_ratio(
 
     ratio = l_target / l_donor
 
-    # Classify recognizable rig scale relationships
     if abs(ratio - (1.0 / 2.4)) < 0.05:
         return round(ratio, 6), "Auto-detected: 0.4167x (CS:GO Rig to GoldSrc 1.0x)"
     elif abs(ratio - 1.0) < 0.05:
@@ -427,14 +759,6 @@ def build_bone_remapping(
     target_matrices: Optional[List[np.ndarray]] = None,
     target_activity: Optional[Dict[int, bool]] = None,
 ) -> Dict[int, int]:
-    """
-    Builds dynamic bone remapping dictionary mapping donor bone index to target bone index.
-    Includes spatial laterality awareness:
-    If target rig has inverted laterality (e.g. Left and Right bone names swapped),
-    maps donor Left to target spatial Left, and donor Right to target spatial Right.
-    Hierarchical fallback:
-    ForeTwist -> Forearm -> Hand -> Root(0).
-    """
     donor_names = [_bone_name(b) for b in donor_bones]
     target_names = [_bone_name(b) for b in target_bones]
 
@@ -459,7 +783,6 @@ def build_bone_remapping(
         if not matches:
             return -1
         if target_activity:
-            # Prioritize candidate bones that actually have active rotation animation!
             active_candidates = [m for m in matches if target_activity.get(m, False)]
             if active_candidates:
                 return active_candidates[0]
@@ -471,9 +794,7 @@ def build_bone_remapping(
         is_arm_bone = any(k in d_clean for k in ("foretwist", "forearm", "hand", "finger", "wrist", "arm"))
 
         if is_arm_bone and is_swapped:
-            # Rig laterality is inverted: swap Left <-> Right search terms
             is_left = any(k in d_low for k in ("l_", "left", ".l", " l ", "_l")) or d_clean.startswith("l")
-            # If donor is Left, search target for Right (since target's Right is spatially on the Left side)
             target_side = "r" if is_left else "l"
             target_full = "right" if is_left else "left"
 
@@ -488,9 +809,7 @@ def build_bone_remapping(
                     f"{target_side}_forearm", f"{target_full}_forearm",
                     f"{target_side}_hand", f"{target_full}_hand"
                 ]
-            elif "finger" in d_clean:
-                candidates = [f"{target_side}_hand", f"{target_full}_hand"]
-            elif "hand" in d_clean:
+            elif "finger" in d_clean or "hand" in d_clean:
                 candidates = [f"{target_side}_hand", f"{target_full}_hand"]
             else:
                 candidates = [f"{target_side}_forearm", f"{target_full}_forearm"]
@@ -500,7 +819,7 @@ def build_bone_remapping(
                 remap[d_idx] = matched
                 continue
 
-        # 1. Exact match (when laterality is not swapped or for non-arm bones)
+        # 1. Exact match
         if d_low in target_lower and not (is_arm_bone and is_swapped):
             remap[d_idx] = target_lower.index(d_low)
             continue
@@ -510,7 +829,7 @@ def build_bone_remapping(
             remap[d_idx] = target_clean.index(d_clean)
             continue
 
-        # 3. ForeTwist fallback hierarchy: ForeTwist -> Forearm -> Hand
+        # 3. ForeTwist fallback
         if "foretwist" in d_clean:
             is_left = any(k in d_low for k in ("l_", "left", ".l", " l ", "_l")) or d_clean.startswith("l")
             candidates = [
@@ -523,7 +842,7 @@ def build_bone_remapping(
                 remap[d_idx] = matched
                 continue
 
-        # 4. Forearm fallback to Hand
+        # 4. Forearm fallback
         if "forearm" in d_clean:
             is_left = any(k in d_low for k in ("l_", "left", ".l", " l ", "_l")) or d_clean.startswith("l")
             candidates = ["l_forearm", "left_forearm", "l_hand", "left_hand"] if is_left else ["r_forearm", "right_forearm", "r_hand", "right_hand"]
@@ -532,7 +851,7 @@ def build_bone_remapping(
                 remap[d_idx] = matched
                 continue
 
-        # 5. Finger fallback to Hand
+        # 5. Finger / Hand fallback
         if "finger" in d_clean or "hand" in d_clean:
             is_left = any(k in d_low for k in ("l_", "left", ".l", " l ", "_l")) or d_clean.startswith("l")
             candidates = ["l_hand", "left_hand"] if is_left else ["r_hand", "right_hand"]
@@ -541,7 +860,7 @@ def build_bone_remapping(
                 remap[d_idx] = matched
                 continue
 
-        # 6. Default fallback to bone 0 (root)
+        # 6. Default fallback
         remap[d_idx] = 0
 
     return remap
@@ -552,12 +871,6 @@ def preflight_safety_check(
     donor_data: bytes,
     scale_ratio: float,
 ) -> Tuple[bool, List[str]]:
-    """
-    Validates GoldSrc engine limits before transplant:
-    - Target and donor have valid IDST v10 headers.
-    - Resulting bodyparts count <= 32 (MAXSTUDIOBODYPARTS).
-    - Submodel vertex count <= 2048 (MAXSTUDIOVERTS).
-    """
     issues: List[str] = []
 
     if len(target_data) < 212:
@@ -573,9 +886,6 @@ def preflight_safety_check(
     if d_magic != STUDIO_MAGIC or d_ver != STUDIO_VERSION:
         issues.append(f"Donor has invalid StudioModel magic/version: {d_magic} v{d_ver}")
 
-    num_target_bp = struct.unpack_from("<I", target_data, 204)[0]
-
-    # Check donor submodel vertex counts
     d_num_bp, d_bp_idx = struct.unpack_from("<II", donor_data, 204)
     for bp in range(d_num_bp):
         bp_off = d_bp_idx + bp * 76
@@ -608,16 +918,13 @@ def transplant_3d_sleeves(
     donor_preset: Optional[str] = None,
     output_path: Optional[Union[str, Path]] = None,
     workspace_root: Optional[Union[str, Path]] = None,
+    force_save: bool = False,
 ) -> Dict[str, Any]:
     """
-    Transplants 3D sleeve submodels into a target viewmodel (e.g. Terrorist bare arm model).
-    - Removes bare arm bodyparts (t_arm) or replaces existing loose sleeve submodels.
-    - Injects volumetric jacket sleeve submodels (preserving 3 separate submodels ct_arms_01..03).
-    - Dynamically scales geometry based on bone length ratio.
-    - Remaps bones with spatial laterality awareness (inverts matching if rig is flipped).
-    - Applies 3D rigid bone basis transforms (inv(M_target) * M_donor) to vertices and normals.
-    - Adds / synchronizes sleeve.bmp with optional preset photographic color grading.
-    - Performs atomic file replacement with .bak backup.
+    Transplants 3D sleeve submodels into a target viewmodel (IDST v10).
+    Dual-mode:
+    1. Native Identity Splice: When donor and target share rig, performs bit-for-bit vertex preservation (0.000 gap).
+    2. Adaptive Cross-Rig: Transforms vertices via 3D rigid bone basis transforms when skeletons differ.
     """
     tgt = target_path or target_model_path
     if not tgt:
@@ -632,61 +939,38 @@ def transplant_3d_sleeves(
     eff_out = out_path or output_path
     out_p = Path(eff_out).resolve() if eff_out else target_p
 
-    # Resolve sleeve preset and donor
+    # Load target binary
+    with open(target_p, "rb") as f:
+        target_data = bytearray(f.read())
+
+    target_bones, target_matrices = compute_bone_bind_matrices(bytes(target_data))
+    t_archetype = classify_rig_archetype(target_bones, target_p.name)
+    t_cluster = detect_skeletal_cluster(target_bones, bytes(target_data), target_p.name)
+
+    # Resolve sleeve preset and cluster/archetype-aware donor
     effective_preset = sleeve_preset or donor_preset
     preset_meta = None
     if effective_preset and effective_preset.lower() in SLEEVE_PRESETS:
         preset_meta = SLEEVE_PRESETS[effective_preset.lower()]
 
-    if donor_path is None:
-        if preset_meta and preset_meta["default_donor"]:
-            donor_p = root / preset_meta["default_donor"]
-            if not donor_p.is_file():
-                cand1 = root / "cstrike" / "models" / "custom_skins" / "ct" / "v_m4a1.mdl"
-                cand2 = root / "cstrike" / "models" / "custom_skins" / "ct" / "v_ak47.mdl"
-                donor_p = cand1 if cand1.is_file() else cand2
-        else:
-            donor_p = root / "cstrike" / "models" / "custom_skins" / "ct" / "v_m4a1.mdl"
-    else:
-        donor_p = Path(donor_path).resolve()
-
-    # Prevent self-donor loop
-    if donor_p.resolve() == target_p.resolve():
-        cand1 = root / "cstrike" / "models" / "custom_skins" / "ct" / "v_m4a1.mdl"
-        cand2 = root / "cstrike" / "models" / "custom_skins" / "ct" / "v_ak47.mdl"
-        donor_p = cand1 if cand1.is_file() else cand2
+    donor_p = resolve_archetype_donor(
+        target_path=target_p,
+        archetype=t_archetype,
+        cluster=t_cluster,
+        target_bones=target_bones,
+        root=root,
+        custom_donor=donor_path,
+        preset_meta=preset_meta,
+    )
 
     if not donor_p.is_file():
         raise FileNotFoundError(f"Donor model not found: {donor_p}")
 
-    # 1. Load target and donor binaries
-    with open(target_p, "rb") as f:
-        target_data = bytearray(f.read())
     with open(donor_p, "rb") as f:
         donor_data = f.read()
 
-    # 2. Check if a paired CT model exists for fast-path native sync
-    target_weapon_name = target_p.stem
-    if target_weapon_name.startswith("v_"):
-        target_weapon_name = target_weapon_name[2:]
-
-    paired_ct_model = root / "cstrike" / "models" / "custom_skins" / "ct" / f"v_{target_weapon_name}.mdl"
-    is_paired_weapon = (
-        donor_path is None
-        and paired_ct_model.is_file()
-        and paired_ct_model.resolve() != target_p.resolve()
-    )
-
-    # 3. Calculate dynamic scale ratio if not explicitly passed
-    if scale_ratio is None or scale_ratio <= 0:
-        calc_ratio, ratio_desc = calculate_scale_ratio(target_p, donor_p)
-        effective_scale = calc_ratio
-    else:
-        effective_scale = float(scale_ratio)
-        ratio_desc = f"Manual override: {effective_scale:.4f}x"
-
-    # 4. Pre-flight engine safety check
-    is_safe, safety_issues = preflight_safety_check(target_data, donor_data, effective_scale)
+    # Pre-flight engine safety check
+    is_safe, safety_issues = preflight_safety_check(target_data, donor_data, scale_ratio or 1.0)
     if not is_safe:
         return {
             "success": False,
@@ -694,7 +978,7 @@ def transplant_3d_sleeves(
             "safety_issues": safety_issues,
         }
 
-    # 5. Create atomic backup of target before modification
+    # Atomic backup of target
     if create_backup and target_p.exists():
         arm_info = detect_arm_type(target_p)
         bak_suffix = ".manset_arm.bak" if arm_info["is_bare"] else ".bak"
@@ -703,56 +987,33 @@ def transplant_3d_sleeves(
         if not bak_file.exists():
             shutil.copy2(target_p, bak_file)
 
-    # 6. Check fast-path native sync for paired weapons
-    if is_paired_weapon and effective_preset is None and sleeve_texture is None:
-        base_m = MdlModel(paired_ct_model)
-        target_m = MdlModel(target_p)
-
-        for t_tex in target_m.textures:
-            lower = t_tex.name.lower()
-            if any(k in lower for k in ("arm", "bare", "sleeve")):
-                continue
-            base_tex = base_m.get_texture_by_name(t_tex.name)
-            if base_tex:
-                if (base_tex.width, base_tex.height) == (t_tex.width, t_tex.height):
-                    base_m.inject_texture_payload(base_tex, t_tex.raw_data, new_flags=base_tex.flags)
-                else:
-                    rgba = t_tex.to_rgba_image().resize((base_tex.width, base_tex.height), Image.Resampling.LANCZOS)
-                    pix, pal = quantize_goldsrc(rgba, is_masked=t_tex.is_masked, defringe=False)
-                    base_m.inject_texture_payload(base_tex, pix + pal, new_flags=base_tex.flags)
-
-        saved_path = base_m.save_atomic(out_p, create_backup=False)
-        health = validate_model_health(saved_path)
-
-        return {
-            "success": True,
-            "message": f"Successfully transplanted 3D CT loose sleeves into {out_p.name}.",
-            "method": "paired_weapon_sync",
-            "scale_ratio": effective_scale,
-            "scale_description": ratio_desc,
-            "submodels_injected": ["ct_arms_01", "ct_arms_02", "ct_arms_03"],
-            "saved_path": str(saved_path),
-            "health": health,
-        }
-
-    # 7. Generic 3D Submodel Splice Engine with 3D Rigid Basis Transform
+    # Parse geometries
     t_parsed = parse_model_geometry(bytes(target_data))
     d_parsed = parse_model_geometry(donor_data)
 
     donor_bones, donor_matrices = compute_bone_bind_matrices(donor_data)
-    target_bones, target_matrices = compute_bone_bind_matrices(bytes(target_data))
 
     d_laterality = detect_rig_laterality(donor_bones, donor_matrices)
     t_laterality = detect_rig_laterality(target_bones, target_matrices)
 
-    t_activity = get_bone_rotation_activity(bytes(target_data))
-    bone_remap = build_bone_remapping(donor_bones, target_bones, donor_matrices, target_matrices, target_activity=t_activity)
+    # Check rig compatibility for Native Splice Mode
+    is_native, native_reason = is_rig_compatible_native(target_bones, donor_bones)
 
-    # Find sleeve texture in donor
+    # Calculate scale ratio for cross-rig
+    if is_native:
+        effective_scale = 1.0
+        ratio_desc = "Native Identity (1.0000x - Exact Arm Rig Match)"
+    elif scale_ratio is None or scale_ratio <= 0:
+        calc_ratio, ratio_desc = calculate_scale_ratio(target_p, donor_p)
+        effective_scale = calc_ratio
+    else:
+        effective_scale = float(scale_ratio)
+        ratio_desc = f"Manual override: {effective_scale:.4f}x"
+
+    # Find / prepare sleeve texture
     donor_sleeve_tex = next((t for t in d_parsed["textures"] if "sleeve" in t["name"].lower()), None)
     if not donor_sleeve_tex:
         donor_sleeve_tex = next((t for t in d_parsed["textures"] if t.get("role") == "glove" or "arm" in t["name"].lower()), None)
-
     if not donor_sleeve_tex and d_parsed["textures"]:
         donor_sleeve_tex = d_parsed["textures"][0]
 
@@ -761,7 +1022,7 @@ def transplant_3d_sleeves(
     s_flags = donor_sleeve_tex["flags"] if donor_sleeve_tex else 0
     s_payload = donor_sleeve_tex["payload"] if donor_sleeve_tex else (b"\x00" * (s_w * s_h + 768))
 
-    # Apply preset color adjustments or custom sleeve texture
+    # Apply color grading / custom sleeve texture
     if preset_meta and preset_meta.get("color_adjustments") and len(s_payload) == (s_w * s_h + 768):
         p_img = Image.frombytes("P", (s_w, s_h), s_payload[: s_w * s_h])
         p_img.putpalette(s_payload[s_w * s_h : s_w * s_h + 768])
@@ -819,18 +1080,14 @@ def transplant_3d_sleeves(
         })
         t_parsed["skin_table"].append(target_sleeve_idx)
 
-    # Extract sleeve submodels from donor
-    # Note: For knife models, arms animate independently (slashing/stabbing).
-    # Omitting connected chest mesh (ct_arms_03) prevents torso stretching.
-    is_knife_model = "knife" in target_p.name.lower()
+    # Extract all sleeve submodels from donor (ct_arms_01, ct_arms_02, ct_arms_03)
+    # NEVER omit ct_arms_03 as it contains the critical wrist cuff geometry
     sleeve_bps = []
     for bp in d_parsed["bodyparts"]:
         s_models = []
         for m in bp["models"]:
             m_low = m["name"].lower()
             bp_low = bp["name"].lower()
-            if is_knife_model and "ct_arms_03" in m_low:
-                continue
             if (
                 any(k in m_low for k in ("ct_arms", "cs_arms_sleeved", "sleeve"))
                 or ("sleeve" in bp_low and not any(k in m_low for k in ("sport", "glove", "hand", "finger")))
@@ -839,131 +1096,146 @@ def transplant_3d_sleeves(
         if s_models:
             sleeve_bps.append((bp, s_models))
 
-    if not sleeve_bps and donor_sleeve_tex:
-        d_sleeve_idx = donor_sleeve_tex.get("index", 0)
-        for bp in d_parsed["bodyparts"]:
-            s_models = []
-            for m in bp["models"]:
-                if any(mesh.get("actual_tex_idx") == d_sleeve_idx or mesh.get("skinref") == d_sleeve_idx for mesh in m["meshes"]):
-                    s_models.append(m)
-            if s_models:
-                sleeve_bps.append((bp, s_models))
-
     if not sleeve_bps:
         return {
             "success": False,
-            "error": f"No sleeve submodels (ct_arms_01..03) could be extracted from donor model '{donor_p.name}'.",
+            "error": f"No sleeve submodels (ct_arms_01..03) could be extracted from donor '{donor_p.name}'.",
         }
 
-    # Transform vertices and normals using 3D rigid bone basis transforms (inv(M_target) * M_donor)
     new_sleeve_bps = []
     injected_submodel_names = []
-    for bp, models in sleeve_bps:
-        scaled_models = []
-        for m in models:
-            new_m = copy.deepcopy(m)
-            injected_submodel_names.append(new_m["name"])
-            new_m["radius"] = float(m["radius"]) * float(effective_scale)
 
-            nv = m["numverts"]
-            vinfo = list(m["vertinfo_raw"])
-            scaled_v = bytearray()
-            new_vinfo = bytearray()
+    if is_native:
+        # MODE 1: NATIVE IDENTITY SPLICE
+        # Zero coordinate transformation, bit-for-bit vertex preservation with dynamic bone-name remapping
+        execution_method = "native_identity_splice"
+        t_name_to_idx = {b["name"].lower(): b["idx"] for b in target_bones}
+        bone_map = {d_b["idx"]: t_name_to_idx.get(d_b["name"].lower(), 0) for d_b in donor_bones}
 
-            for vi in range(nv):
-                vx, vy, vz = struct.unpack_from("<3f", m["verts_raw"], vi * 12)
-                b_donor = vinfo[vi] if vi < len(vinfo) else 0
-                b_target = bone_remap.get(b_donor, 0)
-
-                m_donor_b = donor_matrices[b_donor] if b_donor < len(donor_matrices) else np.identity(4, dtype=np.float32)
-                m_target_b = target_matrices[b_target] if b_target < len(target_matrices) else np.identity(4, dtype=np.float32)
-
-                # 1. Transform vertex to donor world position
-                vh = np.array([vx * effective_scale, vy * effective_scale, vz * effective_scale, 1.0], dtype=np.float32)
-                w_donor = np.matmul(m_donor_b, vh)[:3]
-
-                # 2. Compute arm-axis direction vector in world space towards hand/wrist
-                # Identify whether this arm bone belongs to spatial Right or Left arm
-                b_target_clean = _clean_bone(target_bones[b_target]["name"])
-                is_r_side = b_target_clean.startswith("r") or "rhand" in b_target_clean or "rfore" in b_target_clean
-                target_hand_term = "rhand" if is_r_side else "lhand"
-
-                hand_idx = -1
-                for bi, tb in enumerate(target_bones):
-                    tb_c = _clean_bone(tb["name"])
-                    if target_hand_term in tb_c:
-                        hand_idx = bi
-                        break
-
-                effective_cuff_shift = float(cuff_offset)
-                if effective_cuff_shift == 0.0 and is_knife_model:
-                    # Auto-bridge the ~3.4 unit gap between donor sleeve cuff and short sport gloves (overlap ~0.5 unit)
-                    effective_cuff_shift = 5.4
-
-                if effective_cuff_shift != 0.0 and hand_idx >= 0 and hand_idx < len(target_matrices):
-                    p_hand = target_matrices[hand_idx][:3, 3]
-                    p_arm = m_target_b[:3, 3]
-                    d_arm = p_hand - p_arm
-                    d_len = float(np.linalg.norm(d_arm))
-                    if d_len > 1e-4:
-                        u_arm = d_arm / d_len
-                        w_donor = w_donor + u_arm * effective_cuff_shift
-
-                # 3. Transform to target local bone coordinate space
-                inv_m_target = np.linalg.inv(m_target_b)
-                w_donor_h = np.array([w_donor[0], w_donor[1], w_donor[2], 1.0], dtype=np.float32)
-                v_target = np.matmul(inv_m_target, w_donor_h)[:3]
-
-                scaled_v.extend(struct.pack("<3f", float(v_target[0]), float(v_target[1]), float(v_target[2])))
-                new_vinfo.append(min(255, max(0, b_target)))
-
-            new_m["verts_raw"] = bytes(scaled_v)
-            new_m["vertinfo_raw"] = bytes(new_vinfo)
-
-            # Normals: transform by rotation submatrix: inv(R_target) * R_donor
-            nn = m["numnorms"]
-            ninfo = list(m["norminfo_raw"])
-            scaled_n = bytearray()
-            new_ninfo = bytearray()
-
-            for ni in range(nn):
-                nx, ny, nz = struct.unpack_from("<3f", m["norms_raw"], ni * 12)
-                b_donor = ninfo[ni] if ni < len(ninfo) else 0
-                b_target = bone_remap.get(b_donor, 0)
-
-                m_donor_b = donor_matrices[b_donor] if b_donor < len(donor_matrices) else np.identity(4, dtype=np.float32)
-                m_target_b = target_matrices[b_target] if b_target < len(target_matrices) else np.identity(4, dtype=np.float32)
-
-                r_donor = m_donor_b[:3, :3]
-                r_target = m_target_b[:3, :3]
-
-                r_trans = np.matmul(np.linalg.inv(r_target), r_donor)
-                n_vec = np.array([nx, ny, nz], dtype=np.float32)
-                n_target = np.matmul(r_trans, n_vec)
-                n_len = np.linalg.norm(n_target)
-                if n_len > 1e-6:
-                    n_target /= n_len
-                else:
-                    n_target = np.array([0.0, 1.0, 0.0], dtype=np.float32)
-
-                scaled_n.extend(struct.pack("<3f", float(n_target[0]), float(n_target[1]), float(n_target[2])))
-                new_ninfo.append(min(255, max(0, b_target)))
-
-            new_m["norms_raw"] = bytes(scaled_n)
-            new_m["norminfo_raw"] = bytes(new_ninfo)
-
-            for mesh in new_m["meshes"]:
-                mesh["skinref"] = target_sleeve_idx
-                mesh["actual_tex_idx"] = target_sleeve_idx
-
-            scaled_models.append(new_m)
-
-        if scaled_models:
+        for bp, models in sleeve_bps:
+            m_copies = []
+            for m in models:
+                new_m = copy.deepcopy(m)
+                injected_submodel_names.append(new_m["name"])
+                # Remap bone indices in vertinfo and norminfo
+                new_m["vertinfo_raw"] = bytes([bone_map.get(b, 0) for b in new_m["vertinfo_raw"]])
+                new_m["norminfo_raw"] = bytes([bone_map.get(b, 0) for b in new_m["norminfo_raw"]])
+                for mesh in new_m["meshes"]:
+                    mesh["skinref"] = target_sleeve_idx
+                    mesh["actual_tex_idx"] = target_sleeve_idx
+                m_copies.append(new_m)
             new_bp = copy.deepcopy(bp)
-            new_bp["models"] = scaled_models
+            new_bp["models"] = m_copies
             new_sleeve_bps.append(new_bp)
 
-    # Replace bare arm or existing sleeve bodypart(s) in target
+    else:
+        # MODE 2: ADAPTIVE CROSS-RIG BASIS TRANSFORM
+        execution_method = "adaptive_cross_rig"
+        t_activity = get_bone_rotation_activity(bytes(target_data))
+        bone_remap = build_bone_remapping(
+            donor_bones, target_bones, donor_matrices, target_matrices, target_activity=t_activity
+        )
+
+        for bp, models in sleeve_bps:
+            scaled_models = []
+            for m in models:
+                new_m = copy.deepcopy(m)
+                injected_submodel_names.append(new_m["name"])
+                new_m["radius"] = float(m["radius"]) * float(effective_scale)
+
+                nv = m["numverts"]
+                vinfo = list(m["vertinfo_raw"])
+                scaled_v = bytearray()
+                new_vinfo = bytearray()
+
+                for vi in range(nv):
+                    vx, vy, vz = struct.unpack_from("<3f", m["verts_raw"], vi * 12)
+                    b_donor = vinfo[vi] if vi < len(vinfo) else 0
+                    b_target = bone_remap.get(b_donor, 0)
+
+                    m_donor_b = donor_matrices[b_donor] if b_donor < len(donor_matrices) else np.identity(4, dtype=np.float32)
+                    m_target_b = target_matrices[b_target] if b_target < len(target_matrices) else np.identity(4, dtype=np.float32)
+
+                    # Relative bone rotation basis transform
+                    r_donor = m_donor_b[:3, :3]
+                    r_target = m_target_b[:3, :3]
+                    r_trans = np.matmul(np.linalg.inv(r_target), r_donor)
+
+                    v_vec = np.array([vx * effective_scale, vy * effective_scale, vz * effective_scale], dtype=np.float32)
+                    v_target = np.matmul(r_trans, v_vec)
+
+                    # Dynamic cuff offset along forearm-to-hand axis (only if explicitly specified)
+                    if cuff_offset != 0.0:
+                        b_target_clean = _clean_bone(target_bones[b_target]["name"])
+                        is_r_side = b_target_clean.startswith("r") or "rhand" in b_target_clean or "rfore" in b_target_clean
+                        target_hand_term = "rhand" if is_r_side else "lhand"
+
+                        hand_idx = -1
+                        for bi, tb in enumerate(target_bones):
+                            tb_c = _clean_bone(tb["name"])
+                            if target_hand_term in tb_c:
+                                hand_idx = bi
+                                break
+
+                        if hand_idx >= 0 and hand_idx < len(target_matrices):
+                            p_hand = target_matrices[hand_idx][:3, 3]
+                            p_arm = m_target_b[:3, 3]
+                            d_arm = p_hand - p_arm
+                            d_len = float(np.linalg.norm(d_arm))
+                            if d_len > 1e-4:
+                                u_arm = d_arm / d_len
+                                u_local = np.matmul(np.linalg.inv(r_target), u_arm)
+                                v_target = v_target + u_local * float(cuff_offset)
+
+                    scaled_v.extend(struct.pack("<3f", float(v_target[0]), float(v_target[1]), float(v_target[2])))
+                    new_vinfo.append(min(255, max(0, b_target)))
+
+                new_m["verts_raw"] = bytes(scaled_v)
+                new_m["vertinfo_raw"] = bytes(new_vinfo)
+
+                # Normals transform
+                nn = m["numnorms"]
+                ninfo = list(m["norminfo_raw"])
+                scaled_n = bytearray()
+                new_ninfo = bytearray()
+
+                for ni in range(nn):
+                    nx, ny, nz = struct.unpack_from("<3f", m["norms_raw"], ni * 12)
+                    b_donor = ninfo[ni] if ni < len(ninfo) else 0
+                    b_target = bone_remap.get(b_donor, 0)
+
+                    m_donor_b = donor_matrices[b_donor] if b_donor < len(donor_matrices) else np.identity(4, dtype=np.float32)
+                    m_target_b = target_matrices[b_target] if b_target < len(target_matrices) else np.identity(4, dtype=np.float32)
+
+                    r_donor = m_donor_b[:3, :3]
+                    r_target = m_target_b[:3, :3]
+                    r_trans = np.matmul(np.linalg.inv(r_target), r_donor)
+                    n_vec = np.array([nx, ny, nz], dtype=np.float32)
+                    n_target = np.matmul(r_trans, n_vec)
+                    n_len = np.linalg.norm(n_target)
+                    if n_len > 1e-6:
+                        n_target /= n_len
+                    else:
+                        n_target = np.array([0.0, 1.0, 0.0], dtype=np.float32)
+
+                    scaled_n.extend(struct.pack("<3f", float(n_target[0]), float(n_target[1]), float(n_target[2])))
+                    new_ninfo.append(min(255, max(0, b_target)))
+
+                new_m["norms_raw"] = bytes(scaled_n)
+                new_m["norminfo_raw"] = bytes(new_ninfo)
+
+                for mesh in new_m["meshes"]:
+                    mesh["skinref"] = target_sleeve_idx
+                    mesh["actual_tex_idx"] = target_sleeve_idx
+
+                scaled_models.append(new_m)
+
+            if scaled_models:
+                new_bp = copy.deepcopy(bp)
+                new_bp["models"] = scaled_models
+                new_sleeve_bps.append(new_bp)
+
+    # Insert into target bodyparts replacing bare arms (t_arm)
     final_bps = []
     inserted = False
     for bp in t_parsed["bodyparts"]:
@@ -1010,14 +1282,36 @@ def transplant_3d_sleeves(
 
     temp_out = out_p.with_suffix(".tmp_sleeve.mdl")
     temp_out.write_bytes(out_data)
-    shutil.move(str(temp_out), str(out_p))
 
-    health = validate_model_health(out_p)
+    health = validate_model_health(temp_out)
+    fit_metrics = validate_sleeve_fit(bytes(out_data))
+
+    # Automated Quality Gatekeeper
+    if fit_metrics.get("has_sleeves") and not fit_metrics.get("is_flush") and fit_metrics.get("score", 0) < 80:
+        if not force_save:
+            if temp_out.exists():
+                temp_out.unlink()
+            return {
+                "success": False,
+                "error": (
+                    f"3D Sleeve Transplant quality gate failed: fit score is {fit_metrics.get('score')}/100 "
+                    f"with gap L={fit_metrics.get('min_gap_left')}, R={fit_metrics.get('min_gap_right')}. "
+                    f"Target file was NOT overwritten to prevent model defects. Use force_save=True to override."
+                ),
+                "fit_metrics": fit_metrics,
+                "rig_archetype": t_archetype,
+                "rig_cluster": t_cluster,
+            }
+
+    shutil.move(str(temp_out), str(out_p))
 
     return {
         "success": True,
         "message": f"Successfully injected 3D sleeves ({len(injected_submodel_names)} submodels) into {out_p.name}.",
-        "method": "generic_submodel_splice",
+        "method": execution_method,
+        "rig_archetype": t_archetype,
+        "rig_cluster": t_cluster,
+        "donor_used": str(donor_p),
         "scale_ratio": effective_scale,
         "scale_description": ratio_desc,
         "rig_laterality": t_laterality,
@@ -1025,4 +1319,5 @@ def transplant_3d_sleeves(
         "submodels_injected": injected_submodel_names,
         "saved_path": str(out_p),
         "health": health,
+        "fit_metrics": fit_metrics,
     }

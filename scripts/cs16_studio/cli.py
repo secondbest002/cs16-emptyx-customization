@@ -618,16 +618,25 @@ def cmd_transplant_sleeves(args):
         cuff_offset=args.cuff_offset,
         output_path=Path(args.output).resolve() if args.output else None,
         create_backup=not args.no_backup,
+        force_save=getattr(args, "force", False),
     )
 
     if result.get("success"):
         print(f"\n[SUCCESS] {result.get('message')}")
-        if result.get("detected_laterality"):
-            print(f"Rig Laterality       : {result['detected_laterality']}")
-        if result.get("auto_swapped_lr"):
-            print("Laterality Remap     : Left <-> Right bones auto-swapped for inverted rig.")
+        if result.get("rig_archetype"):
+            print(f"Rig Archetype        : {result['rig_archetype']}")
+        if result.get("rig_cluster"):
+            print(f"Skeletal Rig Cluster : {result['rig_cluster']}")
+        if result.get("method"):
+            print(f"Execution Method     : {result['method']}")
+        if result.get("donor_used"):
+            print(f"Donor Model Used     : {Path(result['donor_used']).name}")
         if result.get("scale_ratio"):
             print(f"Applied Scale Ratio  : {result['scale_ratio']:.4f}x ({result.get('scale_description', '')})")
+        if result.get("fit_metrics"):
+            fit = result["fit_metrics"]
+            status = "FLUSH (Seamless)" if fit.get("is_flush") else "Gap Detected"
+            print(f"Fit Quality Score    : {fit.get('score', 100)}/100 ({status}) [Left Gap: {fit.get('min_gap_left', 0.0)}u, Right Gap: {fit.get('min_gap_right', 0.0)}u]")
         print()
     else:
         print(f"\n[ERROR] Sleeve transplant failed: {result.get('error')}", file=sys.stderr)
@@ -814,6 +823,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_sleeve.add_argument("--cuff-offset", type=float, default=0.0, help="Wrist cuff longitudinal offset along forearm bone (default: 0.0)")
     p_sleeve.add_argument("-o", "--output", default=None, help="Output MDL path (default: in-place)")
     p_sleeve.add_argument("--no-backup", action="store_true", help="Do not create a backup file")
+    p_sleeve.add_argument("--force", action="store_true", help="Force save even if safety check detects fit gaps")
 
     return parser
 
