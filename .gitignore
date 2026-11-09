@@ -33,6 +33,16 @@ my_mods/staging/*.zip
 # System generated
 .system_generated/
 
+# Large Asset Collections (Custom Skins, Stickers & Textures)
+assets/my_stickers/*
+!assets/my_stickers/.gitkeep
+
+assets/my_skins/*
+!assets/my_skins/.gitkeep
+
+assets/skins/*
+!assets/skins/.gitkeep
+
 # Temporary Scratch & Migration Scripts
 scratch/
 scripts/patch_*.py

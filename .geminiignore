@@ -1,6 +1,10 @@
 # CS 1.6 EmptyX Customization - Gemini Exclusions
 # Keep repository strictly lean (<100MB) for Gemini AI scanner
 
+assets/my_stickers/
+assets/my_skins/
+assets/skins/
+
 *.zip
 *.tar.gz
 *.orig.mdl
